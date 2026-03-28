@@ -44,8 +44,8 @@ CRYPTOS = {
     "Pump.fun":    "pump-fun",
     "LayerZero":   "layerzero",
     "Hyperliquid": "hyperliquid",
-    "Syrup":       "maple-finance",
-    "Fluid":       "fluid",
+    "Syrup":       "syrup",
+    "Fluid":       "fluid-protocol",
 }
 
 METRICS_INFO = {
