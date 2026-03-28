@@ -436,16 +436,19 @@ else:
                         pnl_b = (position["entry_price_b"] - price_b) * position["units_b"]
                     pnl_total = pnl_a + pnl_b
                     trades.append({
-                        "entrée":    position["entry_date"].strftime("%Y-%m-%d"),
-                        "sortie":    date.strftime("%Y-%m-%d"),
-                        "type":      position["type"],
-                        "z entrée":  round(position["entry_z"], 2),
-                        "z sortie":  round(z_val, 2),
-                        "P&L A ($)": round(pnl_a, 2),
-                        "P&L B ($)": round(pnl_b, 2),
-                        "P&L ($)":   round(pnl_total, 2),
-                        "raison":    "Stop-loss" if exit_stop else "Retour à la moyenne",
-                        "résultat":  "✅ Gagnant" if pnl_total > 0 else "❌ Perdant",
+                        "#":                  len(trades) + 1,
+                        "entrée":             position["entry_date"].strftime("%Y-%m-%d"),
+                        "sortie":             date.strftime("%Y-%m-%d"),
+                        "type":               position["type"],
+                        "z entrée":           round(position["entry_z"], 2),
+                        "z sortie":           round(z_val, 2),
+                        f"{name_a} entrée $": round(position["entry_price_a"], 4),
+                        f"{name_a} sortie $": round(price_a, 4),
+                        f"{name_b} entrée $": round(position["entry_price_b"], 4),
+                        f"{name_b} sortie $": round(price_b, 4),
+                        "P&L ($)":            round(pnl_total, 2),
+                        "raison":             "Stop-loss" if exit_stop else "Retour à la moyenne",
+                        "résultat":           "✅ Gagnant" if pnl_total > 0 else "❌ Perdant",
                     })
                     position = None
 
