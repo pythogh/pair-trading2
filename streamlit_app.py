@@ -1,5 +1,6 @@
 import os
 import glob
+import requests
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -317,6 +318,31 @@ if "active_tab" not in st.session_state:
     st.session_state.active_tab = 0
 if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
+if "logos" not in st.session_state:
+    st.session_state["logos"] = {}
+
+@st.cache_data(ttl=86400)
+def fetch_logos(cryptos_dict):
+    """Récupère les URLs des logos depuis CoinGecko pour tous les tokens."""
+    logos = {}
+    headers = {"x-cg-demo-api-key": API_KEY}
+    for name, slug in cryptos_dict.items():
+        try:
+            r = requests.get(
+                f"https://api.coingecko.com/api/v3/coins/{slug}",
+                params={"localization": "false", "market_data": "false",
+                        "community_data": "false", "developer_data": "false"},
+                headers=headers, timeout=10
+            )
+            if r.status_code == 200:
+                logos[name] = r.json().get("image", {}).get("small", "")
+        except Exception:
+            logos[name] = ""
+    return logos
+
+if not st.session_state["logos"]:
+    with st.spinner("Chargement des logos..."):
+        st.session_state["logos"] = fetch_logos(CRYPTOS)
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 # Force recalcul si les données contiennent encore l'ancien label "Idéale"
@@ -424,56 +450,65 @@ else:
     if df_tab1_signal.empty:
         st.info("Aucun signal actif sur les paires calculées.")
     else:
+        logos = st.session_state.get("logos", {})
+
         def _color_verdict(val):
             if "✅" in str(val): return "background-color:#e8f7f1;color:#0F6E56"
             if "⚠️" in str(val): return "background-color:#fef3e2;color:#854F0B"
             return "background-color:#fdf0f0;color:#A32D2D"
-
         def _color_corr(val):
-            # Seuil > 0.7 → vert si au-dessus
             try:
                 v = float(val)
                 if v >= 0.7: return "background-color:#e8f7f1;color:#0F6E56"
                 if v >= 0.5: return "background-color:#fef3e2;color:#854F0B"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
-
         def _color_p(val):
-            # Seuil < 0.05 → vert si en dessous
             try:
                 v = float(val)
                 if v < 0.05:  return "background-color:#e8f7f1;color:#0F6E56"
                 if v < 0.15:  return "background-color:#fef3e2;color:#854F0B"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
-
         def _color_hl(val):
-            # Seuil 5–15 jours → vert si dans la plage
             try:
                 v = float(str(val).replace(" j","").replace("∞","9999"))
                 if 5 <= v <= 15: return "background-color:#e8f7f1;color:#0F6E56"
                 if v < 30:       return "background-color:#fef3e2;color:#854F0B"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
-
         def _color_z(val):
-            # Signal actif = |z| > 2 → vert (opportunité détectée)
             try:
                 v = abs(float(val))
                 if v > 2: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
 
-        st.dataframe(
-            df_tab1_signal.reset_index(drop=True).style
+        # Ajouter colonne Logo en HTML (img tag)
+        def make_logo_html(paire):
+            parts = paire.split(" / ")
+            imgs = ""
+            for p in parts:
+                url = logos.get(p, "")
+                if url:
+                    imgs += f"<img src='{url}' style='width:18px;height:18px;border-radius:50%;margin-right:3px;vertical-align:middle'>"
+            return imgs + f"<span style='font-size:12px;vertical-align:middle'>{paire}</span>"
+
+        df_display = df_tab1_signal.reset_index(drop=True).copy()
+        df_display.insert(0, "Tokens", df_display["Paire"].apply(make_logo_html))
+        df_display = df_display.drop(columns=["Paire"])
+
+        st.markdown(
+            df_display.style
             .applymap(_color_verdict, subset=["Verdict"])
             .applymap(_color_corr,    subset=["Corrélation"])
             .applymap(_color_p,       subset=["p-value"])
             .applymap(_color_hl,      subset=["Half-Life (j)"])
             .applymap(_color_z,       subset=["Z-Score"])
-            .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
-            use_container_width=True,
-            hide_index=True,
+            .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"})
+            .hide(axis="index")
+            .to_html(escape=False),
+            unsafe_allow_html=True
         )
 
 # ── Analyse de paire ─────────────────────────────────────────────────────────
@@ -488,8 +523,14 @@ default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b
 ctrl1, ctrl2, ctrl3, ctrl4, _ = st.columns([1.2, 1.2, 0.8, 0.6, 1.2])
 with ctrl1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
+    logo_a = st.session_state["logos"].get(name_a, "")
+    if logo_a:
+        st.markdown(f"<img src='{logo_a}' style='width:20px;height:20px;border-radius:50%;margin-right:6px;vertical-align:middle'><span style='font-size:11px;color:#888'>{name_a}</span>", unsafe_allow_html=True)
 with ctrl2:
     name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
+    logo_b = st.session_state["logos"].get(name_b, "")
+    if logo_b:
+        st.markdown(f"<img src='{logo_b}' style='width:20px;height:20px;border-radius:50%;margin-right:6px;vertical-align:middle'><span style='font-size:11px;color:#888'>{name_b}</span>", unsafe_allow_html=True)
 with ctrl3:
     capital = st.number_input("Capital ($)", value=1000, step=100)
 with ctrl4:
@@ -520,7 +561,15 @@ elif analyse:
             alloc_b = capital - alloc_a
 
             # ── BACKTEST ──────────────────────────────────────────────────
-            st.markdown("#### Backtest")
+            logos = st.session_state.get("logos", {})
+            logo_a_url = logos.get(name_a, "")
+            logo_b_url = logos.get(name_b, "")
+            logo_a_html = f"<img src='{logo_a_url}' style='width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:4px'>" if logo_a_url else ""
+            logo_b_html = f"<img src='{logo_b_url}' style='width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:4px'>" if logo_b_url else ""
+            st.markdown(
+                f"#### {logo_a_html}{name_a} <span style='color:#ccc;font-weight:300'>vs</span> {logo_b_html}{name_b}",
+                unsafe_allow_html=True
+            )
 
             # Paramètres affichés et modifiables
             bp1, bp2, bp3 = st.columns(3)
