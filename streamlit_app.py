@@ -299,132 +299,177 @@ st.caption(f"Données locales · {len(CRYPTOS)} tokens disponibles · dossier `d
 tabs = st.tabs(["📚 Les 5 métriques", "🔍 Analyse d'une paire", "🗺️ Matrice des paires"])
 
 # ══ TAB 1 — MÉTRIQUES ══════════════════════════════════════════════════════════
+
+METRICS_COMPACT = {
+    "Corrélation": {
+        "emoji": "📊",
+        "seuil": "> 0.7",
+        "formule": "cov(rA, rB) / (σA × σB)",
+        "note": "Calculée sur les rendements journaliers (pas les prix). Mesure si les deux actifs bougent dans le même sens.",
+    },
+    "Hedge Ratio β": {
+        "emoji": "⚖️",
+        "seuil": "Pas de seuil",
+        "formule": "β = cov(A, B) / var(B)",
+        "note": "Régression OLS de A sur B. Indique combien d'unités de B couvrent 1 unité de A.",
+    },
+    "Co-intégration p": {
+        "emoji": "🔬",
+        "seuil": "< 0.05",
+        "formule": "ADF test sur spread = A − (β·B + α)",
+        "note": "Test de stationnarité du spread. Si p < 0.05, l'écart entre les deux prix revient toujours à sa moyenne.",
+    },
+    "Half-Life": {
+        "emoji": "⏳",
+        "seuil": "5–15 jours",
+        "formule": "ln(2) / λ  où  Δspread = λ · spread(t−1)",
+        "note": "Modèle Ornstein-Uhlenbeck. Temps moyen pour que l'écart se réduise de moitié.",
+    },
+    "Z-Score": {
+        "emoji": "🌡️",
+        "seuil": "Signal si |z| > 2",
+        "formule": "(spread − moy₃₀) / σ₃₀",
+        "note": "Fenêtre glissante 30 jours. Un z > +2 se produit ~2.5% du temps — signal de trading.",
+    },
+}
+
 with tabs[0]:
     st.subheader("Les 5 métriques du pair trading")
-    st.markdown("Maîtrise-les dans l'ordre : chacune s'appuie sur la précédente.")
+    st.caption("Dans l'ordre — chaque métrique s'appuie sur la précédente.")
+    st.divider()
 
-    for i, (name, info) in enumerate(METRICS_INFO.items(), 1):
-        with st.expander(f"{info['emoji']}  {i}. {name}", expanded=True):
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.markdown(info["definition"])
-            with col2:
-                st.info(info["seuil"])
+    cols = st.columns(5)
+    for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
+        with col:
+            st.markdown(f"**{info['emoji']} {name}**")
+            st.caption(f"Seuil : {info['seuil']}")
+            st.code(info["formule"], language=None)
+            st.markdown(f"<p style='font-size:11px;color:#888;line-height:1.5'>{info['note']}</p>", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("### Comment lire les résultats ensemble ?")
     st.markdown(
-        "| Étape | Métrique | Question posée |\n"
-        "|-------|----------|----------------|\n"
-        "| 1 | **Corrélation** | Est-ce que les deux actifs bougent ensemble ? |\n"
-        "| 2 | **Hedge Ratio** | Dans quelle proportion les positionner ? |\n"
-        "| 3 | **Co-intégration** | Y a-t-il un élastique entre eux ? |\n"
-        "| 4 | **Half-Life** | Combien de temps dure un trade typique ? |\n"
-        "| 5 | **Z-Score** | L'élastique est-il tendu *maintenant* ? |\n"
+        "| # | Métrique | Question |\n"
+        "|---|----------|----------|\n"
+        "| 1 | Corrélation | Bougent-ils ensemble ? |\n"
+        "| 2 | Hedge Ratio | Dans quelle proportion ? |\n"
+        "| 3 | Co-intégration | Y a-t-il un élastique ? |\n"
+        "| 4 | Half-Life | Combien de temps dure le trade ? |\n"
+        "| 5 | Z-Score | L'élastique est-il tendu maintenant ? |\n"
     )
 
 # ══ TAB 2 — ANALYSE D'UNE PAIRE ════════════════════════════════════════════════
 with tabs[1]:
     st.subheader("Analyse d'une paire")
 
-    col1, col2, col3 = st.columns([2, 2, 1])
-    with col1:
-        name_a = st.selectbox("Actif A", list(CRYPTOS.keys()), index=2)
-    with col2:
-        name_b = st.selectbox("Actif B", list(CRYPTOS.keys()), index=3)
-    with col3:
-        capital = st.number_input("Capital ($)", value=1000, step=100)
+    left, right = st.columns([1, 2], gap="large")
 
-    if name_a == name_b:
-        st.warning("Choisis deux actifs différents.")
-    elif st.button("🚀 Analyser", use_container_width=True):
-        with st.spinner(f"Chargement {name_a}..."):
+    with left:
+        name_a = st.selectbox("Actif A", list(CRYPTOS.keys()), index=min(2, len(CRYPTOS)-1))
+        name_b = st.selectbox("Actif B", list(CRYPTOS.keys()), index=min(3, len(CRYPTOS)-1))
+        capital = st.number_input("Capital ($)", value=1000, step=100)
+        analyse = st.button("Analyser", use_container_width=False)
+
+        if name_a == name_b:
+            st.warning("Choisis deux actifs différents.")
+
+    with right:
+        if name_a != name_b and analyse:
             s_a, err_a = fetch_prices(CRYPTOS[name_a])
-        with st.spinner(f"Chargement {name_b}..."):
             s_b, err_b = fetch_prices(CRYPTOS[name_b])
 
-        if err_a:
-            st.error(f"❌ {name_a} : {err_a}")
-        elif err_b:
-            st.error(f"❌ {name_b} : {err_b}")
-        else:
-            m = compute_metrics(s_a, s_b, name_a, name_b)
-            if m is None:
-                st.error("Pas assez de données communes pour calculer.")
+            if err_a:
+                st.error(f"❌ {name_a} : {err_a}")
+            elif err_b:
+                st.error(f"❌ {name_b} : {err_b}")
             else:
-                # Verdict
-                if m["verdict_color"] == "green":
-                    st.success(f"**{m['Verdict']}** — co-intégration solide, half-life rapide.")
-                elif m["verdict_color"] == "orange":
-                    st.warning(f"**{m['Verdict']}** — co-intégration ok mais paire lente.")
+                m = compute_metrics(s_a, s_b, name_a, name_b)
+                if m is None:
+                    st.error("Pas assez de données communes pour calculer.")
                 else:
-                    st.error(f"**{m['Verdict']}** — co-intégration insuffisante.")
+                    # Verdict
+                    if m["verdict_color"] == "green":
+                        st.success(f"**{m['Verdict']}** — co-intégration solide, half-life rapide.")
+                    elif m["verdict_color"] == "orange":
+                        st.warning(f"**{m['Verdict']}** — co-intégration ok mais paire lente.")
+                    else:
+                        st.error(f"**{m['Verdict']}** — co-intégration insuffisante.")
 
-                # Signal + allocation
-                z = m["Z-Score"]
-                beta = m["Hedge Ratio (β)"]
-                p_a = float(s_a.iloc[-1])
-                p_b = float(s_b.iloc[-1])
-                ratio = abs(beta * p_b / p_a)
-                alloc_a = capital / (1 + ratio)
-                alloc_b = capital - alloc_a
+                    # Signal + allocation
+                    z = m["Z-Score"]
+                    beta = m["Hedge Ratio (β)"]
+                    p_a = float(s_a.iloc[-1])
+                    p_b = float(s_b.iloc[-1])
+                    ratio = abs(beta * p_b / p_a)
+                    alloc_a = capital / (1 + ratio)
+                    alloc_b = capital - alloc_a
 
-                if abs(z) > 2:
-                    st.error(
-                        f"🚨 **Signal : {m['Signal']}**\n\n"
-                        f"→ {name_a} : **{alloc_a:.0f}$**  ·  {name_b} : **{alloc_b:.0f}$**"
+                    if abs(z) > 2:
+                        st.error(
+                            f"🚨 **Signal : {m['Signal']}**\n\n"
+                            f"→ {name_a} : **{alloc_a:.0f}$**  ·  {name_b} : **{alloc_b:.0f}$**"
+                        )
+                    else:
+                        st.info(f"😴 **{m['Signal']}** — z-score neutre ({z})")
+
+                    # Métriques
+                    st.divider()
+                    c1, c2, c3, c4, c5 = st.columns(5)
+                    c1.metric("Corrélation", m["Corrélation"])
+                    c2.metric("Hedge Ratio β", m["Hedge Ratio (β)"])
+                    c3.metric("Co-intégration p", m["Co-intégration (p)"])
+                    c4.metric("Half-Life", f"{m['Half-Life (jours)']} j")
+                    c5.metric("Z-Score", m["Z-Score"])
+
+                    st.divider()
+
+                    # Graphique 1 — prix normalisés
+                    df = m["df"]
+                    z_score = m["z_score"]
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=df.index, y=df["A"] / df["A"].iloc[0],
+                        name=name_a, line=dict(color="#1D9E75", width=1.5)
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=df.index, y=df["B"] / df["B"].iloc[0],
+                        name=name_b, line=dict(color="#7F77DD", width=1.5)
+                    ))
+                    fig.update_layout(
+                        title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
+                        height=220,
+                        margin=dict(t=36, b=16, l=40, r=16),
+                        plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        legend=dict(
+                            orientation="h",
+                            yanchor="top", y=-0.15,
+                            xanchor="left", x=0,
+                            font=dict(size=11)
+                        ),
                     )
-                else:
-                    st.info(f"😴 **{m['Signal']}** — z-score neutre ({z})")
+                    fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
+                    fig.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
+                    st.plotly_chart(fig, use_container_width=True)
 
-                # Métriques
-                st.divider()
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Corrélation", m["Corrélation"])
-                c2.metric("Hedge Ratio β", m["Hedge Ratio (β)"])
-                c3.metric("Co-intégration p", m["Co-intégration (p)"])
-                c4.metric("Half-Life", f"{m['Half-Life (jours)']} j")
-                c5.metric("Z-Score", m["Z-Score"])
-
-                # Graphiques
-                df = m["df"]
-                z_score = m["z_score"]
-
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=df.index, y=df["A"] / df["A"].iloc[0],
-                    name=name_a, line=dict(color="#1D9E75", width=1.5)
-                ))
-                fig.add_trace(go.Scatter(
-                    x=df.index, y=df["B"] / df["B"].iloc[0],
-                    name=name_b, line=dict(color="#7F77DD", width=1.5)
-                ))
-                fig.update_layout(
-                    title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-                    height=240, margin=dict(t=36, b=16, l=40, r=16),
-                    plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    legend=dict(font=dict(size=11)),
-                )
-                fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
-                fig.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
-                st.plotly_chart(fig, use_container_width=True)
-
-                fig2 = go.Figure()
-                fig2.add_trace(go.Scatter(
-                    x=z_score.index, y=z_score,
-                    name="Z-Score", line=dict(color="#378ADD", width=1.5),
-                    fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"
-                ))
-                for y_val, color in [(2, "rgba(220,50,50,0.5)"), (-2, "rgba(220,50,50,0.5)"), (0, "rgba(180,180,180,0.5)")]:
-                    fig2.add_hline(y=y_val, line_dash="dash", line_color=color, line_width=1)
-                fig2.update_layout(
-                    title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-                    height=240, margin=dict(t=36, b=16, l=40, r=16),
-                    plot_bgcolor="#fff", paper_bgcolor="#fff",
-                )
-                fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
-                fig2.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
-                st.plotly_chart(fig2, use_container_width=True)
+                    # Graphique 2 — z-score
+                    fig2 = go.Figure()
+                    fig2.add_trace(go.Scatter(
+                        x=z_score.index, y=z_score,
+                        name="Z-Score", line=dict(color="#378ADD", width=1.5),
+                        fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"
+                    ))
+                    for y_val, color in [(2, "rgba(220,50,50,0.5)"), (-2, "rgba(220,50,50,0.5)"), (0, "rgba(180,180,180,0.5)")]:
+                        fig2.add_hline(y=y_val, line_dash="dash", line_color=color, line_width=1)
+                    fig2.update_layout(
+                        title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
+                        height=220,
+                        margin=dict(t=36, b=16, l=40, r=16),
+                        plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        showlegend=False,
+                    )
+                    fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
+                    fig2.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
+                    st.plotly_chart(fig2, use_container_width=True)
 
 # ══ TAB 3 — MATRICE ════════════════════════════════════════════════════════════
 with tabs[2]:
@@ -479,7 +524,7 @@ with tabs[2]:
         progress.empty()
 
         if not results:
-            st.error("Aucun résultat. Vérifie ta connexion.")
+            st.error("Aucun résultat. Vérifie que tes fichiers CSV sont bien dans le dossier data/.")
         else:
             df_res = pd.DataFrame(results)
 
@@ -509,7 +554,36 @@ with tabs[2]:
             fig_corr.update_traces(textfont_size=11)
             st.plotly_chart(fig_corr, use_container_width=True)
 
-            # Tableau
+            # Tableau — on retire les paires sans signal
+            st.markdown("#### Paires avec signal actif")
+            df_signal = df_res[df_res["Signal"] != "Pas de signal"].copy()
+
+            if df_signal.empty:
+                st.info("Aucun signal actif en ce moment (z-score entre -2 et +2 sur toutes les paires).")
+            else:
+                def color_verdict(val):
+                    if "✅" in str(val): return "background-color: rgba(29,158,117,0.15)"
+                    if "⚠️" in str(val): return "background-color: rgba(239,159,39,0.15)"
+                    return "background-color: rgba(226,75,74,0.1)"
+
+                def color_pvalue(val):
+                    try: return "color: #1D9E75" if float(val) < 0.05 else "color: #E24B4A"
+                    except: return ""
+
+                def color_zscore(val):
+                    try: return "font-weight: 500; color: #E24B4A" if abs(float(val)) > 2 else ""
+                    except: return ""
+
+                styled = (
+                    df_signal.style
+                    .applymap(color_verdict, subset=["Verdict"])
+                    .applymap(color_pvalue, subset=["p-value"])
+                    .applymap(color_zscore, subset=["Z-Score"])
+                    .format({"Corrélation": "{:.3f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"})
+                )
+                st.dataframe(styled, use_container_width=True, height=min(400, 40 + len(df_signal) * 36))
+
+            # Tableau complet (toutes les paires)
             st.markdown("#### Toutes les paires")
 
             def color_verdict(val):
@@ -525,14 +599,14 @@ with tabs[2]:
                 try: return "font-weight: 500; color: #E24B4A" if abs(float(val)) > 2 else ""
                 except: return ""
 
-            styled = (
+            styled_all = (
                 df_res.style
                 .applymap(color_verdict, subset=["Verdict"])
                 .applymap(color_pvalue, subset=["p-value"])
                 .applymap(color_zscore, subset=["Z-Score"])
                 .format({"Corrélation": "{:.3f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"})
             )
-            st.dataframe(styled, use_container_width=True, height=480)
+            st.dataframe(styled_all, use_container_width=True, height=480)
 
             # Top 5
             st.markdown("#### 🏆 Meilleures configurations")
@@ -541,11 +615,12 @@ with tabs[2]:
                 st.info("Aucune paire idéale sur cette période. Consulte le tableau.")
             else:
                 for _, row in ideal.head(5).iterrows():
+                    signal_txt = f" · **{row['Signal']}**" if row["Signal"] != "Pas de signal" else ""
                     st.success(
                         f"**{row['Paire']}** · "
                         f"corr {row['Corrélation']} · "
                         f"p {row['p-value']} · "
                         f"hl {row['Half-Life (j)']} j · "
-                        f"z {row['Z-Score']} · "
-                        f"{row['Signal']}"
+                        f"z {row['Z-Score']}"
+                        f"{signal_txt}"
                     )
