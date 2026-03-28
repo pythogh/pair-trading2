@@ -126,13 +126,10 @@ def compute_metrics(series_a, series_b, name_a, name_b):
         verdict_color = "red"
 
     if current_z > 2:
-        signal_dir = "↓↑"   # short A / long B
-        signal = f"↓ {name_a}  ↑ {name_b}"
+        signal = f"SHORT ↓ {name_a} / LONG ↑ {name_b}"
     elif current_z < -2:
-        signal_dir = "↑↓"   # long A / short B
-        signal = f"↑ {name_a}  ↓ {name_b}"
+        signal = f"LONG ↑ {name_a} / SHORT ↓ {name_b}"
     else:
-        signal_dir = ""
         signal = "—"
 
     return {
@@ -162,8 +159,17 @@ if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
-_stale = any("Idéale" in str(r.get("Verdict", "")) for r in st.session_state["matrix_results"])
-if not st.session_state["matrix_results"] or _stale:
+_stale = any(
+    "Idéale" in str(r.get("Verdict", "")) or
+    ("↑" not in str(r.get("Signal", "")) and "LONG" not in str(r.get("Signal", "")) and r.get("Signal", "") not in ("—", "Pas de signal"))
+    for r in st.session_state["matrix_results"]
+)
+# Force recalcul si les anciens verdicts n'intègrent pas la corrélation
+_old_verdict = any(
+    r.get("Corrélation", 1) < 0.7 and r.get("Verdict", "") == "✅ Valide"
+    for r in st.session_state["matrix_results"]
+)
+if not st.session_state["matrix_results"] or _stale or _old_verdict:
     all_names = list(CRYPTOS.keys())
     pairs = list(combinations(all_names, 2))
     bar = st.progress(0, text="Calcul des paires en cours...")
@@ -252,12 +258,13 @@ if not st.session_state.get("matrix_results"):
     st.caption("Calcul en cours au prochain chargement…")
 else:
     df_tab1 = pd.DataFrame(st.session_state["matrix_results"])
-    df_tab1_signal = df_tab1[df_tab1["Signal"] != "—"].copy()
 
     if filtre == "Valide uniquement":
-        df_tab1_signal = df_tab1_signal[df_tab1_signal["Verdict"] == "✅ Valide"]
+        df_tab1_signal = df_tab1[df_tab1["Verdict"] == "✅ Valide"].copy()
+    else:
+        df_tab1_signal = df_tab1.copy()
 
-    verdict_order = {"✅ Valide": 0, "⚠️ Lente": 1, "❌ Faible": 2}
+    verdict_order = {"✅ Valide": 0, "⚠️ Lente": 1, "⚠️ Corrélation faible": 2, "❌ Faible": 3}
     df_tab1_signal["_sort"] = df_tab1_signal["Verdict"].map(verdict_order).fillna(3)
     df_tab1_signal = df_tab1_signal.sort_values("_sort").drop(columns=["_sort"])
 
@@ -301,10 +308,9 @@ else:
             except: return ""
 
         def _color_signal(val):
-            # ↓ en rouge, ↑ en vert — on colore selon la première flèche (direction A)
             s = str(val)
-            if s.startswith("↓"): return "color:#A32D2D;font-weight:500"
-            if s.startswith("↑"): return "color:#0F6E56;font-weight:500"
+            if s.startswith("SHORT"): return "color:#A32D2D;font-weight:500"
+            if s.startswith("LONG"):  return "color:#0F6E56;font-weight:500"
             return "color:#aaa"
 
         st.dataframe(
