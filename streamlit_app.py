@@ -112,9 +112,12 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     except Exception:
         half_life = float("inf")
 
-    if p_value < 0.05 and half_life < 15:
+    if p_value < 0.05 and half_life < 15 and correlation >= 0.7:
         verdict = "✅ Valide"
         verdict_color = "green"
+    elif p_value < 0.05 and half_life < 15:
+        verdict = "⚠️ Corrélation faible"
+        verdict_color = "orange"
     elif p_value < 0.05:
         verdict = "⚠️ Lente"
         verdict_color = "orange"
@@ -123,11 +126,14 @@ def compute_metrics(series_a, series_b, name_a, name_b):
         verdict_color = "red"
 
     if current_z > 2:
-        signal = f"↓ {name_a} / ↑ {name_b}"
+        signal_dir = "↓↑"   # short A / long B
+        signal = f"↓ {name_a}  ↑ {name_b}"
     elif current_z < -2:
-        signal = f"↑ {name_a} / ↓ {name_b}"
+        signal_dir = "↑↓"   # long A / short B
+        signal = f"↑ {name_a}  ↓ {name_b}"
     else:
-        signal = "Pas de signal"
+        signal_dir = ""
+        signal = "—"
 
     return {
         "Corrélation": round(correlation, 3),
@@ -246,7 +252,7 @@ if not st.session_state.get("matrix_results"):
     st.caption("Calcul en cours au prochain chargement…")
 else:
     df_tab1 = pd.DataFrame(st.session_state["matrix_results"])
-    df_tab1_signal = df_tab1[df_tab1["Signal"] != "Pas de signal"].copy()
+    df_tab1_signal = df_tab1[df_tab1["Signal"] != "—"].copy()
 
     if filtre == "Valide uniquement":
         df_tab1_signal = df_tab1_signal[df_tab1_signal["Verdict"] == "✅ Valide"]
@@ -295,11 +301,11 @@ else:
             except: return ""
 
         def _color_signal(val):
-            if "↑" in str(val) and "↓" in str(val):
-                return "color:#1a1a1a"  # mixte, on laisse neutre
-            if "↑" in str(val): return "color:#0F6E56;font-weight:500"
-            if "↓" in str(val): return "color:#A32D2D;font-weight:500"
-            return ""
+            # ↓ en rouge, ↑ en vert — on colore selon la première flèche (direction A)
+            s = str(val)
+            if s.startswith("↓"): return "color:#A32D2D;font-weight:500"
+            if s.startswith("↑"): return "color:#0F6E56;font-weight:500"
+            return "color:#aaa"
 
         st.dataframe(
             df_tab1_signal.reset_index(drop=True).style
