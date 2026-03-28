@@ -462,12 +462,31 @@ else:
             rets       = df_trades["P&L ($)"]
             sharpe     = (rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0
 
-            b1, b2, b3, b4, b5 = st.columns(5)
-            b1.metric("P&L cumulé", f"{total_pnl:+.0f}$")
-            b2.metric("Trades", n_trades)
-            b3.metric("Win rate", f"{win_rate:.0%}")
-            b4.metric("Drawdown max", f"{max_dd:.0f}$")
-            b5.metric("Sharpe", f"{sharpe:.2f}")
+            pnl_color  = "#0F6E56" if total_pnl >= 0 else "#A32D2D"
+            pnl_icon   = "▲" if total_pnl >= 0 else "▼"
+            wr_color   = "#0F6E56" if win_rate >= 0.5 else "#A32D2D"
+            wr_icon    = "▲" if win_rate >= 0.5 else "▼"
+            dd_color   = "#A32D2D" if max_dd < 0 else "#0F6E56"
+            sh_color   = "#0F6E56" if sharpe >= 1 else ("#854F0B" if sharpe >= 0 else "#A32D2D")
+            sh_icon    = "▲" if sharpe >= 1 else ("—" if sharpe >= 0 else "▼")
+
+            bt_cards = [
+                ("P&L cumulé",   f"<span style='color:{pnl_color}'>{pnl_icon} {total_pnl:+.0f}$</span>"),
+                ("Trades",       f"<span style='color:#333'>{n_trades}</span>"),
+                ("Win rate",     f"<span style='color:{wr_color}'>{wr_icon} {win_rate:.0%}</span>"),
+                ("Drawdown max", f"<span style='color:{dd_color}'>▼ {max_dd:.0f}$</span>"),
+                ("Sharpe",       f"<span style='color:{sh_color}'>{sh_icon} {sharpe:.2f}</span>"),
+            ]
+            bt_cols = st.columns(5)
+            for col, (label, value) in zip(bt_cols, bt_cards):
+                with col:
+                    st.markdown(
+                        f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:12px 14px 10px;">
+                        <p style="font-size:10px;color:#aaa;margin:0 0 6px">{label}</p>
+                        <p style="font-size:20px;font-weight:500;margin:0">{value}</p>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
 
             fig_pnl = go.Figure()
             fig_pnl.add_trace(go.Scatter(
