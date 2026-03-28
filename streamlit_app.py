@@ -457,11 +457,11 @@ else:
             except: return ""
 
         def _color_z(val):
-            # Signal actif = |z| > 2 → rouge (opportunité tendue)
+            # Signal actif = |z| > 2 → vert (opportunité détectée)
             try:
                 v = abs(float(val))
-                if v > 2: return "background-color:#fdf0f0;color:#A32D2D;font-weight:500"
-                return "background-color:#e8f7f1;color:#0F6E56"
+                if v > 2: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
+                return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
 
         st.dataframe(
