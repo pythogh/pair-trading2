@@ -335,7 +335,7 @@ if not st.session_state["matrix_results"]:
     st.session_state["matrix_results"] = results_auto
     bar.empty()
 
-tabs = st.tabs(["📚 Les 5 métriques", "🔍 Analyse d'une paire"])
+tabs = st.tabs(["📊 Dashboard"])
 
 # ══ TAB 1 — MÉTRIQUES ══════════════════════════════════════════════════════════
 
@@ -377,30 +377,36 @@ with tabs[0]:
     for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
         with col:
             st.markdown(
-                f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 12px;">
-                <p style="font-size:12px;font-weight:500;margin:0 0 4px">{info['emoji']} {name}</p>
-                <p style="font-size:10px;color:#999;margin:0 0 0">Seuil : {info['seuil']}</p>
+                f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 12px 10px;">
+                <p style="font-size:12px;font-weight:500;margin:0 0 3px">{info['emoji']} {name}</p>
+                <p style="font-size:10px;color:#999;margin:0 0 10px">Seuil : {info['seuil']}</p>""",
+                unsafe_allow_html=True
+            )
+            st.latex(info["latex"])
+            st.markdown(
+                f"""<p style="font-size:11px;color:#888;line-height:1.5;margin:8px 0 0">{info['note']}</p>
                 </div>""",
                 unsafe_allow_html=True
             )
-            st.markdown("<div style='margin:6px 0 2px'></div>", unsafe_allow_html=True)
-            st.latex(info["latex"])
-            st.markdown("<div style='margin:2px 0 6px'></div>", unsafe_allow_html=True)
-            st.markdown(
-                f"<p style='font-size:11px;color:#888;line-height:1.5;padding:0 2px'>{info['note']}</p>",
-                unsafe_allow_html=True
-            )
 
-    # Tableau des signaux actifs
+    # ── Signaux actifs ────────────────────────────────────────────────────────
     st.divider()
-    st.markdown("#### Signaux actifs")
+
+    sig_col, filter_col = st.columns([3, 1])
+    with sig_col:
+        st.markdown("#### Signaux actifs")
+    with filter_col:
+        filtre = st.radio("Afficher", ["Idéale uniquement", "Tout"], horizontal=True, label_visibility="collapsed")
+
     if not st.session_state.get("matrix_results"):
         st.caption("Calcul en cours au prochain chargement…")
     else:
         df_tab1 = pd.DataFrame(st.session_state["matrix_results"])
         df_tab1_signal = df_tab1[df_tab1["Signal"] != "Pas de signal"].copy()
 
-        # Trier : Idéale en tête, puis Lente, puis Faible
+        if filtre == "Idéale uniquement":
+            df_tab1_signal = df_tab1_signal[df_tab1_signal["Verdict"] == "✅ Idéale"]
+
         verdict_order = {"✅ Idéale": 0, "⚠️ Lente": 1, "❌ Faible": 2}
         df_tab1_signal["_sort"] = df_tab1_signal["Verdict"].map(verdict_order).fillna(3)
         df_tab1_signal = df_tab1_signal.sort_values("_sort").drop(columns=["_sort"])
@@ -429,14 +435,12 @@ with tabs[0]:
                 height=min(520, 40 + len(df_tab1_signal) * 36)
             )
 
-# ══ TAB 2 — ANALYSE D'UNE PAIRE ════════════════════════════════════════════════
-with tabs[1]:
-    st.subheader("Analyse d'une paire")
+    # ── Analyse de paire (intégrée ici) ──────────────────────────────────────
+    st.divider()
+    st.markdown("#### Analyse d'une paire")
 
     keys = list(CRYPTOS.keys())
-
-    # Pré-remplissage depuis la matrice
-    default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else min(0, len(keys)-1)
+    default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys)-1)
 
     left, right = st.columns([1, 2], gap="large")
@@ -453,7 +457,6 @@ with tabs[1]:
         if name_a != name_b and analyse:
             s_a, err_a = fetch_prices(CRYPTOS[name_a])
             s_b, err_b = fetch_prices(CRYPTOS[name_b])
-
             if err_a:
                 st.error(f"❌ {name_a} : {err_a}")
             elif err_b:
@@ -479,14 +482,10 @@ with tabs[1]:
                     alloc_b = capital - alloc_a
 
                     if abs(z) > 2:
-                        st.error(
-                            f"🚨 **Signal : {m['Signal']}**\n\n"
-                            f"→ {name_a} : **{alloc_a:.0f}$**  ·  {name_b} : **{alloc_b:.0f}$**"
-                        )
+                        st.error(f"🚨 **Signal : {m['Signal']}**\n\n→ {name_a} : **{alloc_a:.0f}$**  ·  {name_b} : **{alloc_b:.0f}$**")
                     else:
                         st.info(f"😴 **{m['Signal']}** — z-score neutre ({z})")
 
-                    # Métriques
                     st.divider()
                     c1, c2, c3, c4, c5 = st.columns(5)
                     c1.metric("Corrélation", m["Corrélation"])
@@ -495,16 +494,10 @@ with tabs[1]:
                     c4.metric("Half-Life", f"{m['Half-Life (jours)']} j")
                     c5.metric("Z-Score", m["Z-Score"])
 
-                    # ── BACKTEST ──────────────────────────────────────────────
                     st.divider()
                     st.markdown("#### Backtest")
-
-                    spread = m["spread"]
                     z_score_series = m["z_score"].dropna()
-
                     entry_z = 2.0
-                    exit_z = 0.0
-
                     trades = []
                     position = None
                     for date, z_val in z_score_series.items():
@@ -514,7 +507,7 @@ with tabs[1]:
                             elif z_val < -entry_z:
                                 position = {"type": "LONG_A", "entry_z": z_val, "entry_date": date}
                         else:
-                            if abs(z_val) < exit_z or (position["type"] == "SHORT_A" and z_val < 0) or (position["type"] == "LONG_A" and z_val > 0):
+                            if (position["type"] == "SHORT_A" and z_val < 0) or (position["type"] == "LONG_A" and z_val > 0):
                                 pnl = abs(position["entry_z"]) - abs(z_val)
                                 trades.append({
                                     "entrée": position["entry_date"].strftime("%Y-%m-%d"),
@@ -527,27 +520,21 @@ with tabs[1]:
                                 position = None
 
                     if not trades:
-                        st.info("Aucun trade déclenché sur la période avec ces paramètres.")
+                        st.info("Aucun trade déclenché sur la période.")
                     else:
                         df_trades = pd.DataFrame(trades)
                         n_trades = len(df_trades)
                         n_win = len(df_trades[df_trades["résultat"].str.contains("Gagnant")])
                         win_rate = n_win / n_trades if n_trades > 0 else 0
-
-                        # P&L cumulé simulé sur le z-score
-                        pnl_values = []
-                        cum_pnl = 0
+                        pnl_values, cum_pnl = [], 0
                         for _, t in df_trades.iterrows():
-                            delta = abs(t["z entrée"]) - abs(t["z sortie"])
-                            cum_pnl += delta * capital * 0.01
+                            cum_pnl += (abs(t["z entrée"]) - abs(t["z sortie"])) * capital * 0.01
                             pnl_values.append(cum_pnl)
-
                         total_pnl = pnl_values[-1] if pnl_values else 0
                         max_dd = min(0, min(pnl_values)) if pnl_values else 0
                         returns = pd.Series(pnl_values).diff().dropna()
                         sharpe = (returns.mean() / returns.std() * np.sqrt(252)) if returns.std() > 0 else 0
 
-                        # Métriques backtest
                         b1, b2, b3, b4, b5 = st.columns(5)
                         b1.metric("P&L cumulé", f"{total_pnl:+.0f}$")
                         b2.metric("Trades", n_trades)
@@ -555,68 +542,32 @@ with tabs[1]:
                         b4.metric("Drawdown max", f"{max_dd:.0f}$")
                         b5.metric("Sharpe", f"{sharpe:.2f}")
 
-                        # Graphique P&L
                         fig_pnl = go.Figure()
-                        fig_pnl.add_trace(go.Scatter(
-                            x=list(range(len(pnl_values))),
-                            y=pnl_values,
-                            mode="lines+markers",
-                            line=dict(color="#1D9E75", width=1.5),
-                            marker=dict(size=5),
-                            name="P&L cumulé"
-                        ))
+                        fig_pnl.add_trace(go.Scatter(x=list(range(len(pnl_values))), y=pnl_values, mode="lines+markers", line=dict(color="#1D9E75", width=1.5), marker=dict(size=5)))
                         fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
-                        fig_pnl.update_layout(
-                            title=dict(text="P&L cumulé par trade", font=dict(size=12)),
-                            height=200, margin=dict(t=36, b=16, l=40, r=16),
-                            plot_bgcolor="#fff", paper_bgcolor="#fff",
-                            showlegend=False,
-                        )
+                        fig_pnl.update_layout(title=dict(text="P&L cumulé par trade", font=dict(size=12)), height=200, margin=dict(t=36, b=16, l=40, r=16), plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False)
                         fig_pnl.update_xaxes(title_text="Trade #", showgrid=False, tickfont=dict(size=10))
                         fig_pnl.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
                         st.plotly_chart(fig_pnl, use_container_width=True)
 
-                        # Tableau des trades
                         with st.expander(f"Détail des {n_trades} trades"):
                             st.dataframe(df_trades, use_container_width=True, hide_index=True)
 
                     st.divider()
-
-                    # Graphique prix normalisés
                     df = m["df"]
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=df.index, y=df["A"] / df["A"].iloc[0],
-                        name=name_a, line=dict(color="#1D9E75", width=1.5)
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=df.index, y=df["B"] / df["B"].iloc[0],
-                        name=name_b, line=dict(color="#7F77DD", width=1.5)
-                    ))
-                    fig.update_layout(
-                        title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-                        height=220, margin=dict(t=36, b=16, l=40, r=16),
-                        plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="left", x=0, font=dict(size=11)),
-                    )
+                    fig.add_trace(go.Scatter(x=df.index, y=df["A"]/df["A"].iloc[0], name=name_a, line=dict(color="#1D9E75", width=1.5)))
+                    fig.add_trace(go.Scatter(x=df.index, y=df["B"]/df["B"].iloc[0], name=name_b, line=dict(color="#7F77DD", width=1.5)))
+                    fig.update_layout(title=dict(text="Prix normalisés (base 1)", font=dict(size=12)), height=220, margin=dict(t=36, b=16, l=40, r=16), plot_bgcolor="#fff", paper_bgcolor="#fff", legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="left", x=0, font=dict(size=11)))
                     fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
                     fig.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
                     st.plotly_chart(fig, use_container_width=True)
 
-                    # Graphique z-score
                     fig2 = go.Figure()
-                    fig2.add_trace(go.Scatter(
-                        x=z_score_series.index, y=z_score_series,
-                        line=dict(color="#378ADD", width=1.5),
-                        fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"
-                    ))
+                    fig2.add_trace(go.Scatter(x=z_score_series.index, y=z_score_series, line=dict(color="#378ADD", width=1.5), fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"))
                     for y_val, color in [(2, "rgba(220,50,50,0.5)"), (-2, "rgba(220,50,50,0.5)"), (0, "rgba(180,180,180,0.5)")]:
                         fig2.add_hline(y=y_val, line_dash="dash", line_color=color, line_width=1)
-                    fig2.update_layout(
-                        title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-                        height=220, margin=dict(t=36, b=16, l=40, r=16),
-                        plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
-                    )
+                    fig2.update_layout(title=dict(text="Z-Score — signal de trading", font=dict(size=12)), height=220, margin=dict(t=36, b=16, l=40, r=16), plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False)
                     fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
                     fig2.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
                     st.plotly_chart(fig2, use_container_width=True)
