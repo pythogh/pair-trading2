@@ -307,7 +307,9 @@ if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
-if not st.session_state["matrix_results"]:
+# Force recalcul si les données contiennent encore l'ancien label "Idéale"
+_stale = any("Idéale" in str(r.get("Verdict","")) for r in st.session_state["matrix_results"])
+if not st.session_state["matrix_results"] or _stale:
     all_names = list(CRYPTOS.keys())
     pairs = list(combinations(all_names, 2))
     bar = st.progress(0, text="Calcul des paires en cours...")
@@ -354,13 +356,13 @@ METRICS_COMPACT = {
     "Co-intégration p": {
         "emoji": "🔬",
         "seuil": "< 0.05",
-        "latex": r"\text{ADF}\bigl(\underbrace{A - (\beta B + \alpha)}_{\text{spread}}\bigr)",
+        "latex": r"\text{ADF}(A - \beta B - \alpha)",
         "note": "Test de stationnarité du spread. Si p < 0.05, l'écart entre les deux prix revient toujours à sa moyenne.",
     },
     "Half-Life": {
         "emoji": "⏳",
         "seuil": "5–15 jours",
-        "latex": r"t_{1/2} = \frac{\ln 2}{\lambda} \quad \Delta s_t = \lambda \, s_{t-1}",
+        "latex": r"t_{1/2} = \frac{\ln 2}{\lambda}, \quad \Delta s_t = \lambda\, s_{t-1}",
         "note": "Modèle Ornstein-Uhlenbeck. Temps moyen pour que l'écart se réduise de moitié.",
     },
     "Z-Score": {
@@ -371,61 +373,22 @@ METRICS_COMPACT = {
     },
 }
 
-st.markdown("""
-<script>
-MathJax = {
-  tex: { inlineMath: [['$','$']] },
-  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-""", unsafe_allow_html=True)
-
-METRICS_COMPACT = {
-    "Corrélation": {
-        "emoji": "📊",
-        "seuil": "> 0.7",
-        "latex": r"$$\rho = \dfrac{\text{cov}(r_A,\, r_B)}{\sigma_A \cdot \sigma_B}$$",
-        "note": "Calculée sur les rendements journaliers (pas les prix). Mesure si les deux actifs bougent dans le même sens.",
-    },
-    "Hedge Ratio β": {
-        "emoji": "⚖️",
-        "seuil": "Pas de seuil",
-        "latex": r"$$\beta = \dfrac{\text{cov}(A,\, B)}{\text{var}(B)}$$",
-        "note": "Régression OLS de A sur B. Indique combien d'unités de B couvrent 1 unité de A.",
-    },
-    "Co-intégration p": {
-        "emoji": "🔬",
-        "seuil": "< 0.05",
-        "latex": r"$$\text{ADF}\!\left(A - \beta B - \alpha\right)$$",
-        "note": "Test de stationnarité du spread. Si p < 0.05, l'écart entre les deux prix revient toujours à sa moyenne.",
-    },
-    "Half-Life": {
-        "emoji": "⏳",
-        "seuil": "5–15 jours",
-        "latex": r"$$t_{1/2} = \dfrac{\ln 2}{\lambda}, \quad \Delta s_t = \lambda\, s_{t-1}$$",
-        "note": "Modèle Ornstein-Uhlenbeck. Temps moyen pour que l'écart se réduise de moitié.",
-    },
-    "Z-Score": {
-        "emoji": "🌡️",
-        "seuil": "Signal si |z| > 2",
-        "latex": r"$$z = \dfrac{s_t - \mu_{30}}{\sigma_{30}}$$",
-        "note": "Fenêtre glissante 30 jours. Un z > +2 se produit ~2.5% du temps — signal de trading.",
-    },
-}
-
 cols = st.columns(5)
 for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
     with col:
-        st.markdown(
-            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 12px 12px;">
-            <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {name}</p>
-            <p style="font-size:10px;color:#999;margin:0 0 10px">Seuil : {info['seuil']}</p>
-            <div style="text-align:center;padding:6px 0 6px">{info['latex']}</div>
-            <p style="font-size:11px;color:#888;line-height:1.5;margin:8px 0 0">{info['note']}</p>
-            </div>""",
-            unsafe_allow_html=True
-        )
+        with st.container(border=True):
+            st.markdown(
+                f"<p style='font-size:12px;font-weight:500;margin:0 0 2px'>{info['emoji']} {name}</p>"
+                f"<p style='font-size:10px;color:#999;margin:0 0 4px'>Seuil : {info['seuil']}</p>",
+                unsafe_allow_html=True
+            )
+            st.latex(info["latex"])
+            st.markdown(
+                f"<p style='font-size:11px;color:#888;line-height:1.5;margin:4px 0 0'>{info['note']}</p>",
+                unsafe_allow_html=True
+            )
+
+
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
