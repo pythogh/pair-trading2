@@ -112,9 +112,12 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     except Exception:
         half_life = float("inf")
 
-    if p_value < 0.05 and half_life < 15 and correlation >= 0.7:
+    if p_value < 0.05 and half_life < 15 and correlation >= 0.7 and abs(current_z) > 2:
         verdict = "✅ Valide"
         verdict_color = "green"
+    elif p_value < 0.05 and half_life < 15 and correlation >= 0.7:
+        verdict = "⚠️ Pas de signal"
+        verdict_color = "orange"
     elif p_value < 0.05 and half_life < 15:
         verdict = "⚠️ Corrélation faible"
         verdict_color = "orange"
@@ -161,15 +164,11 @@ if "matrix_results" not in st.session_state:
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 _stale = any(
     "Idéale" in str(r.get("Verdict", "")) or
-    ("↑" not in str(r.get("Signal", "")) and "LONG" not in str(r.get("Signal", "")) and r.get("Signal", "") not in ("—", "Pas de signal"))
-    for r in st.session_state["matrix_results"]
-)
-# Force recalcul si les anciens verdicts n'intègrent pas la corrélation
-_old_verdict = any(
+    "Pas de signal" not in [x.get("Verdict","") for x in st.session_state["matrix_results"]] and
     r.get("Corrélation", 1) < 0.7 and r.get("Verdict", "") == "✅ Valide"
     for r in st.session_state["matrix_results"]
 )
-if not st.session_state["matrix_results"] or _stale or _old_verdict:
+if not st.session_state["matrix_results"] or _stale:
     all_names = list(CRYPTOS.keys())
     pairs = list(combinations(all_names, 2))
     bar = st.progress(0, text="Calcul des paires en cours...")
@@ -264,7 +263,7 @@ else:
     else:
         df_tab1_signal = df_tab1.copy()
 
-    verdict_order = {"✅ Valide": 0, "⚠️ Lente": 1, "⚠️ Corrélation faible": 2, "❌ Faible": 3}
+    verdict_order = {"✅ Valide": 0, "⚠️ Pas de signal": 1, "⚠️ Lente": 2, "⚠️ Corrélation faible": 3, "❌ Faible": 4}
     df_tab1_signal["_sort"] = df_tab1_signal["Verdict"].map(verdict_order).fillna(3)
     df_tab1_signal = df_tab1_signal.sort_values("_sort").drop(columns=["_sort"])
 
@@ -304,7 +303,7 @@ else:
             try:
                 v = abs(float(val))
                 if v > 2: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
-                return ""  # neutre si pas de signal
+                return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
 
         def _color_signal(val):
