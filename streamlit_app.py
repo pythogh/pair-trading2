@@ -303,6 +303,8 @@ if "prefill_b" not in st.session_state:
     st.session_state.prefill_b = None
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = 0
+if "matrix_results" not in st.session_state:
+    st.session_state["matrix_results"] = []
 
 tabs = st.tabs(["📚 Les 5 métriques", "🔍 Analyse d'une paire", "🗺️ Matrice des paires"])
 
@@ -346,10 +348,47 @@ with tabs[0]:
     cols = st.columns(5)
     for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
         with col:
-            st.markdown(f"**{info['emoji']} {name}**")
-            st.caption(f"Seuil : {info['seuil']}")
-            st.code(info["formule"], language=None)
-            st.markdown(f"<p style='font-size:11px;color:#888;line-height:1.5'>{info['note']}</p>", unsafe_allow_html=True)
+            st.markdown(
+                f"""<div style="border:1px solid #e8e5de;border-radius:8px;padding:14px 12px;">
+                <p style="font-size:12px;font-weight:500;margin:0 0 4px">{info['emoji']} {name}</p>
+                <p style="font-size:10px;color:#999;margin:0 0 8px">Seuil : {info['seuil']}</p>
+                <code style="font-size:10px;background:#f7f6f3;padding:4px 6px;border-radius:4px;display:block;white-space:pre-wrap;word-break:break-all">{info['formule']}</code>
+                <p style="font-size:11px;color:#888;line-height:1.5;margin:8px 0 0">{info['note']}</p>
+                </div>""",
+                unsafe_allow_html=True
+            )
+
+    # Tableau des signaux actifs (depuis session_state)
+    st.divider()
+    st.markdown("#### Signaux actifs")
+    if "matrix_results" not in st.session_state or not st.session_state["matrix_results"]:
+        st.caption("Lance le calcul dans l'onglet Matrice pour voir les signaux ici.")
+    else:
+        df_tab1 = pd.DataFrame(st.session_state["matrix_results"])
+        df_tab1_signal = df_tab1[df_tab1["Signal"] != "Pas de signal"].copy()
+        if df_tab1_signal.empty:
+            st.info("Aucun signal actif sur les paires calculées.")
+        else:
+            def _color_verdict(val):
+                if "✅" in str(val): return "background-color: rgba(29,158,117,0.15)"
+                if "⚠️" in str(val): return "background-color: rgba(239,159,39,0.15)"
+                return "background-color: rgba(226,75,74,0.1)"
+            def _color_p(val):
+                try: return "color: #1D9E75" if float(val) < 0.05 else "color: #E24B4A"
+                except: return ""
+            def _color_z(val):
+                try: return "font-weight:500;color:#E24B4A" if abs(float(val)) > 2 else ""
+                except: return ""
+            st.dataframe(
+                df_tab1_signal.style
+                .applymap(_color_verdict, subset=["Verdict"])
+                .applymap(_color_p, subset=["p-value"])
+                .applymap(_color_z, subset=["Z-Score"])
+                .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
+                use_container_width=True,
+                hide_index=True,
+                height=min(480, 40 + len(df_tab1_signal) * 36)
+            )
 
 # ══ TAB 2 — ANALYSE D'UNE PAIRE ════════════════════════════════════════════════
 with tabs[1]:
@@ -624,141 +663,65 @@ with tabs[2]:
                 margin=dict(t=16, b=16),
                 font=dict(size=11),
             )
+            # Stocker les résultats pour l'onglet 1
+            st.session_state["matrix_results"] = results
+
+            # Matrice de corrélation
+            st.markdown("#### Corrélations")
+            corr_matrix = pd.DataFrame(index=selected, columns=selected, dtype=float)
+            for _, row in df_res.iterrows():
+                a, b = row["Paire"].split(" / ")
+                corr_matrix.loc[a, b] = row["Corrélation"]
+                corr_matrix.loc[b, a] = row["Corrélation"]
+            for name in selected:
+                corr_matrix.loc[name, name] = 1.0
+
+            fig_corr = px.imshow(
+                corr_matrix.astype(float),
+                color_continuous_scale="RdYlGn",
+                zmin=-1, zmax=1,
+                text_auto=".2f",
+                aspect="auto",
+                height=420,
+            )
+            fig_corr.update_layout(
+                paper_bgcolor="#fff", plot_bgcolor="#fff",
+                margin=dict(t=16, b=16),
+                font=dict(size=11),
+            )
             fig_corr.update_traces(textfont_size=11)
             st.plotly_chart(fig_corr, use_container_width=True)
 
-            # Tableau — paires avec signal actif
-            st.markdown("#### Paires avec signal actif")
+            # Tableau paires avec signal (filtre: signal actif uniquement)
+            st.markdown("#### Paires avec signal")
             df_signal = df_res[df_res["Signal"] != "Pas de signal"].copy()
 
-            # Tableau — paires avec signal actif ET co-intégration valide
-            st.markdown("#### Paires avec signal actif")
-            df_signal = df_res[
-                (df_res["Signal"] != "Pas de signal") &
-                (df_res["Verdict"] != "❌ Faible")
-            ].copy()
-
             if df_signal.empty:
-                st.info("Aucune opportunité valide en ce moment — soit pas de signal z-score, soit co-intégration insuffisante.")
+                st.info("Aucun signal actif en ce moment.")
             else:
-                # En-tête
-                h1, h2, h3, h4, h5, h6, h7 = st.columns([2.2, 1, 1, 1, 1, 1, 1.8])
-                for h, label in zip(
-                    [h1, h2, h3, h4, h5, h6, h7],
-                    ["Paire", "Corrélation", "Beta (β)", "p-value", "Half-Life", "Z-Score", "Signal"]
-                ):
-                    h.markdown(f"<p style='font-size:11px;color:#999;margin:0'>{label}</p>", unsafe_allow_html=True)
-                st.divider()
+                def color_verdict(val):
+                    if "✅" in str(val): return "background-color: rgba(29,158,117,0.15)"
+                    if "⚠️" in str(val): return "background-color: rgba(239,159,39,0.15)"
+                    return "background-color: rgba(226,75,74,0.1)"
 
-                for idx, row in df_signal.iterrows():
-                    c1, c2, c3, c4, c5, c6, c7 = st.columns([2.2, 1, 1, 1, 1, 1, 1.8])
-                    verdict_icon = "✅" if "✅" in row["Verdict"] else "⚠️"
-                    z_color = "#E24B4A" if abs(float(row["Z-Score"])) > 2 else "inherit"
-                    p_color = "#1D9E75" if float(row["p-value"]) < 0.05 else "#E24B4A"
+                def color_pvalue(val):
+                    try: return "color: #1D9E75" if float(val) < 0.05 else "color: #E24B4A"
+                    except: return ""
 
-                    c1.markdown(f"**{row['Paire']}** {verdict_icon}")
-                    c2.markdown(f"<span style='font-size:12px'>{row['Corrélation']:.3f}</span>", unsafe_allow_html=True)
-                    c3.markdown(f"<span style='font-size:12px'>{row['Beta (β)']:.4f}</span>", unsafe_allow_html=True)
-                    c4.markdown(f"<span style='font-size:12px;color:{p_color}'>{row['p-value']:.4f}</span>", unsafe_allow_html=True)
-                    c5.markdown(f"<span style='font-size:12px'>{row['Half-Life (j)']} j</span>", unsafe_allow_html=True)
-                    c6.markdown(f"<span style='font-size:12px;font-weight:500;color:{z_color}'>{row['Z-Score']:.2f}</span>", unsafe_allow_html=True)
-                    c7.markdown(f"<span style='font-size:11px'>{row['Signal']}</span>", unsafe_allow_html=True)
+                def color_zscore(val):
+                    try: return "font-weight: 500; color: #E24B4A" if abs(float(val)) > 2 else ""
+                    except: return ""
 
-                    # Graphe détail pleine largeur sous la ligne
-                    pair_a, pair_b = row["Paire"].split(" / ")
-                    with st.expander(f"Détail z-score — {row['Paire']}", expanded=False):
-                        sa, ea = fetch_prices(CRYPTOS[pair_a])
-                        sb, eb = fetch_prices(CRYPTOS[pair_b])
-                        if ea or eb:
-                            st.error(ea or eb)
-                        else:
-                            md = compute_metrics(sa, sb, pair_a, pair_b)
-                            if md:
-                                z_s = md["z_score"].dropna()
-                                df_ab = md["df"]
-
-                                col_g1, col_g2 = st.columns(2)
-                                with col_g1:
-                                    fig_z = go.Figure()
-                                    fig_z.add_trace(go.Scatter(
-                                        x=z_s.index, y=z_s,
-                                        line=dict(color="#378ADD", width=1.2),
-                                        fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"
-                                    ))
-                                    for yv, col in [(2, "rgba(220,50,50,0.4)"), (-2, "rgba(220,50,50,0.4)"), (0, "rgba(180,180,180,0.4)")]:
-                                        fig_z.add_hline(y=yv, line_dash="dash", line_color=col, line_width=0.8)
-                                    fig_z.update_layout(
-                                        title=dict(text="Z-Score", font=dict(size=11)),
-                                        height=200, margin=dict(t=30, b=10, l=30, r=10),
-                                        plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
-                                    )
-                                    fig_z.update_xaxes(showgrid=False, tickfont=dict(size=9))
-                                    fig_z.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=9))
-                                    st.plotly_chart(fig_z, use_container_width=True)
-
-                                with col_g2:
-                                    fig_p = go.Figure()
-                                    fig_p.add_trace(go.Scatter(
-                                        x=df_ab.index, y=df_ab["A"] / df_ab["A"].iloc[0],
-                                        name=pair_a, line=dict(color="#1D9E75", width=1.2)
-                                    ))
-                                    fig_p.add_trace(go.Scatter(
-                                        x=df_ab.index, y=df_ab["B"] / df_ab["B"].iloc[0],
-                                        name=pair_b, line=dict(color="#7F77DD", width=1.2)
-                                    ))
-                                    fig_p.update_layout(
-                                        title=dict(text="Prix normalisés", font=dict(size=11)),
-                                        height=200, margin=dict(t=30, b=10, l=30, r=10),
-                                        plot_bgcolor="#fff", paper_bgcolor="#fff",
-                                        legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
-                                    )
-                                    fig_p.update_xaxes(showgrid=False, tickfont=dict(size=9))
-                                    fig_p.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=9))
-                                    st.plotly_chart(fig_p, use_container_width=True)
-
-            # Tableau complet (toutes les paires)
-            st.markdown("#### Toutes les paires")
-
-            def color_verdict(val):
-                if "✅" in str(val): return "background-color: rgba(29,158,117,0.15)"
-                if "⚠️" in str(val): return "background-color: rgba(239,159,39,0.15)"
-                return "background-color: rgba(226,75,74,0.1)"
-
-            def color_pvalue(val):
-                try: return "color: #1D9E75" if float(val) < 0.05 else "color: #E24B4A"
-                except: return ""
-
-            def color_zscore(val):
-                try: return "font-weight: 500; color: #E24B4A" if abs(float(val)) > 2 else ""
-                except: return ""
-
-            styled_all = (
-                df_res.style
-                .applymap(color_verdict, subset=["Verdict"])
-                .applymap(color_pvalue, subset=["p-value"])
-                .applymap(color_zscore, subset=["Z-Score"])
-                .format({
-                    "Corrélation": "{:.3f}",
-                    "Beta (β)": "{:.4f}",
-                    "p-value": "{:.4f}",
-                    "Z-Score": "{:.2f}",
-                })
-            )
-            st.dataframe(styled_all, use_container_width=True, height=480)
-
-            # Top 5
-            st.markdown("#### 🏆 Meilleures configurations")
-            ideal = df_res[df_res["Verdict"] == "✅ Idéale"].sort_values("p-value")
-            if len(ideal) == 0:
-                st.info("Aucune paire idéale sur cette période. Consulte le tableau.")
-            else:
-                for _, row in ideal.head(5).iterrows():
-                    signal_txt = f" · **{row['Signal']}**" if row["Signal"] != "Pas de signal" else ""
-                    st.success(
-                        f"**{row['Paire']}** · "
-                        f"corr {row['Corrélation']} · "
-                        f"p {row['p-value']} · "
-                        f"hl {row['Half-Life (j)']} j · "
-                        f"z {row['Z-Score']}"
-                        f"{signal_txt}"
-                    )
+                styled_signal = (
+                    df_signal.style
+                    .applymap(color_verdict, subset=["Verdict"])
+                    .applymap(color_pvalue, subset=["p-value"])
+                    .applymap(color_zscore, subset=["Z-Score"])
+                    .format({
+                        "Corrélation": "{:.3f}",
+                        "Beta (β)": "{:.4f}",
+                        "p-value": "{:.4f}",
+                        "Z-Score": "{:.2f}",
+                    })
+                )
+                st.dataframe(styled_signal, use_container_width=True, height=min(480, 40 + len(df_signal) * 36))
