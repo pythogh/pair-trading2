@@ -296,6 +296,14 @@ def compute_metrics(series_a, series_b, name_a, name_b):
 st.title("📈 Pair Trading Analyzer")
 st.caption(f"Données locales · {len(CRYPTOS)} tokens disponibles · dossier `data/`")
 
+# ─── SESSION STATE ─────────────────────────────────────────────────────────────
+if "prefill_a" not in st.session_state:
+    st.session_state.prefill_a = None
+if "prefill_b" not in st.session_state:
+    st.session_state.prefill_b = None
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = 0
+
 tabs = st.tabs(["📚 Les 5 métriques", "🔍 Analyse d'une paire", "🗺️ Matrice des paires"])
 
 # ══ TAB 1 — MÉTRIQUES ══════════════════════════════════════════════════════════
@@ -334,10 +342,7 @@ METRICS_COMPACT = {
 }
 
 with tabs[0]:
-    st.subheader("Les 5 métriques du pair trading")
-    st.caption("Dans l'ordre — chaque métrique s'appuie sur la précédente.")
     st.divider()
-
     cols = st.columns(5)
     for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
         with col:
@@ -346,29 +351,23 @@ with tabs[0]:
             st.code(info["formule"], language=None)
             st.markdown(f"<p style='font-size:11px;color:#888;line-height:1.5'>{info['note']}</p>", unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown(
-        "| # | Métrique | Question |\n"
-        "|---|----------|----------|\n"
-        "| 1 | Corrélation | Bougent-ils ensemble ? |\n"
-        "| 2 | Hedge Ratio | Dans quelle proportion ? |\n"
-        "| 3 | Co-intégration | Y a-t-il un élastique ? |\n"
-        "| 4 | Half-Life | Combien de temps dure le trade ? |\n"
-        "| 5 | Z-Score | L'élastique est-il tendu maintenant ? |\n"
-    )
-
 # ══ TAB 2 — ANALYSE D'UNE PAIRE ════════════════════════════════════════════════
 with tabs[1]:
     st.subheader("Analyse d'une paire")
 
+    keys = list(CRYPTOS.keys())
+
+    # Pré-remplissage depuis la matrice
+    default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else min(0, len(keys)-1)
+    default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys)-1)
+
     left, right = st.columns([1, 2], gap="large")
 
     with left:
-        name_a = st.selectbox("Actif A", list(CRYPTOS.keys()), index=min(2, len(CRYPTOS)-1))
-        name_b = st.selectbox("Actif B", list(CRYPTOS.keys()), index=min(3, len(CRYPTOS)-1))
+        name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
+        name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
         capital = st.number_input("Capital ($)", value=1000, step=100)
         analyse = st.button("Analyser", use_container_width=False)
-
         if name_a == name_b:
             st.warning("Choisis deux actifs différents.")
 
@@ -386,7 +385,6 @@ with tabs[1]:
                 if m is None:
                     st.error("Pas assez de données communes pour calculer.")
                 else:
-                    # Verdict
                     if m["verdict_color"] == "green":
                         st.success(f"**{m['Verdict']}** — co-intégration solide, half-life rapide.")
                     elif m["verdict_color"] == "orange":
@@ -394,7 +392,6 @@ with tabs[1]:
                     else:
                         st.error(f"**{m['Verdict']}** — co-intégration insuffisante.")
 
-                    # Signal + allocation
                     z = m["Z-Score"]
                     beta = m["Hedge Ratio (β)"]
                     p_a = float(s_a.iloc[-1])
@@ -420,12 +417,95 @@ with tabs[1]:
                     c4.metric("Half-Life", f"{m['Half-Life (jours)']} j")
                     c5.metric("Z-Score", m["Z-Score"])
 
+                    # ── BACKTEST ──────────────────────────────────────────────
+                    st.divider()
+                    st.markdown("#### Backtest")
+
+                    spread = m["spread"]
+                    z_score_series = m["z_score"].dropna()
+
+                    entry_z = 2.0
+                    exit_z = 0.0
+
+                    trades = []
+                    position = None
+                    for date, z_val in z_score_series.items():
+                        if position is None:
+                            if z_val > entry_z:
+                                position = {"type": "SHORT_A", "entry_z": z_val, "entry_date": date}
+                            elif z_val < -entry_z:
+                                position = {"type": "LONG_A", "entry_z": z_val, "entry_date": date}
+                        else:
+                            if abs(z_val) < exit_z or (position["type"] == "SHORT_A" and z_val < 0) or (position["type"] == "LONG_A" and z_val > 0):
+                                pnl = abs(position["entry_z"]) - abs(z_val)
+                                trades.append({
+                                    "entrée": position["entry_date"].strftime("%Y-%m-%d"),
+                                    "sortie": date.strftime("%Y-%m-%d"),
+                                    "type": position["type"].replace("_", " "),
+                                    "z entrée": round(position["entry_z"], 2),
+                                    "z sortie": round(z_val, 2),
+                                    "résultat": "✅ Gagnant" if pnl > 0 else "❌ Perdant",
+                                })
+                                position = None
+
+                    if not trades:
+                        st.info("Aucun trade déclenché sur la période avec ces paramètres.")
+                    else:
+                        df_trades = pd.DataFrame(trades)
+                        n_trades = len(df_trades)
+                        n_win = len(df_trades[df_trades["résultat"].str.contains("Gagnant")])
+                        win_rate = n_win / n_trades if n_trades > 0 else 0
+
+                        # P&L cumulé simulé sur le z-score
+                        pnl_values = []
+                        cum_pnl = 0
+                        for _, t in df_trades.iterrows():
+                            delta = abs(t["z entrée"]) - abs(t["z sortie"])
+                            cum_pnl += delta * capital * 0.01
+                            pnl_values.append(cum_pnl)
+
+                        total_pnl = pnl_values[-1] if pnl_values else 0
+                        max_dd = min(0, min(pnl_values)) if pnl_values else 0
+                        returns = pd.Series(pnl_values).diff().dropna()
+                        sharpe = (returns.mean() / returns.std() * np.sqrt(252)) if returns.std() > 0 else 0
+
+                        # Métriques backtest
+                        b1, b2, b3, b4, b5 = st.columns(5)
+                        b1.metric("P&L cumulé", f"{total_pnl:+.0f}$")
+                        b2.metric("Trades", n_trades)
+                        b3.metric("Win rate", f"{win_rate:.0%}")
+                        b4.metric("Drawdown max", f"{max_dd:.0f}$")
+                        b5.metric("Sharpe", f"{sharpe:.2f}")
+
+                        # Graphique P&L
+                        fig_pnl = go.Figure()
+                        fig_pnl.add_trace(go.Scatter(
+                            x=list(range(len(pnl_values))),
+                            y=pnl_values,
+                            mode="lines+markers",
+                            line=dict(color="#1D9E75", width=1.5),
+                            marker=dict(size=5),
+                            name="P&L cumulé"
+                        ))
+                        fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
+                        fig_pnl.update_layout(
+                            title=dict(text="P&L cumulé par trade", font=dict(size=12)),
+                            height=200, margin=dict(t=36, b=16, l=40, r=16),
+                            plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            showlegend=False,
+                        )
+                        fig_pnl.update_xaxes(title_text="Trade #", showgrid=False, tickfont=dict(size=10))
+                        fig_pnl.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
+                        st.plotly_chart(fig_pnl, use_container_width=True)
+
+                        # Tableau des trades
+                        with st.expander(f"Détail des {n_trades} trades"):
+                            st.dataframe(df_trades, use_container_width=True, hide_index=True)
+
                     st.divider()
 
-                    # Graphique 1 — prix normalisés
+                    # Graphique prix normalisés
                     df = m["df"]
-                    z_score = m["z_score"]
-
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=df.index, y=df["A"] / df["A"].iloc[0],
@@ -437,35 +517,27 @@ with tabs[1]:
                     ))
                     fig.update_layout(
                         title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-                        height=220,
-                        margin=dict(t=36, b=16, l=40, r=16),
+                        height=220, margin=dict(t=36, b=16, l=40, r=16),
                         plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        legend=dict(
-                            orientation="h",
-                            yanchor="top", y=-0.15,
-                            xanchor="left", x=0,
-                            font=dict(size=11)
-                        ),
+                        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="left", x=0, font=dict(size=11)),
                     )
                     fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
                     fig.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
                     st.plotly_chart(fig, use_container_width=True)
 
-                    # Graphique 2 — z-score
+                    # Graphique z-score
                     fig2 = go.Figure()
                     fig2.add_trace(go.Scatter(
-                        x=z_score.index, y=z_score,
-                        name="Z-Score", line=dict(color="#378ADD", width=1.5),
+                        x=z_score_series.index, y=z_score_series,
+                        line=dict(color="#378ADD", width=1.5),
                         fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"
                     ))
                     for y_val, color in [(2, "rgba(220,50,50,0.5)"), (-2, "rgba(220,50,50,0.5)"), (0, "rgba(180,180,180,0.5)")]:
                         fig2.add_hline(y=y_val, line_dash="dash", line_color=color, line_width=1)
                     fig2.update_layout(
                         title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-                        height=220,
-                        margin=dict(t=36, b=16, l=40, r=16),
-                        plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        showlegend=False,
+                        height=220, margin=dict(t=36, b=16, l=40, r=16),
+                        plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
                     )
                     fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
                     fig2.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
@@ -561,27 +633,24 @@ with tabs[2]:
             if df_signal.empty:
                 st.info("Aucun signal actif en ce moment (z-score entre -2 et +2 sur toutes les paires).")
             else:
-                def color_verdict(val):
-                    if "✅" in str(val): return "background-color: rgba(29,158,117,0.15)"
-                    if "⚠️" in str(val): return "background-color: rgba(239,159,39,0.15)"
-                    return "background-color: rgba(226,75,74,0.1)"
-
-                def color_pvalue(val):
-                    try: return "color: #1D9E75" if float(val) < 0.05 else "color: #E24B4A"
-                    except: return ""
-
-                def color_zscore(val):
-                    try: return "font-weight: 500; color: #E24B4A" if abs(float(val)) > 2 else ""
-                    except: return ""
-
-                styled = (
-                    df_signal.style
-                    .applymap(color_verdict, subset=["Verdict"])
-                    .applymap(color_pvalue, subset=["p-value"])
-                    .applymap(color_zscore, subset=["Z-Score"])
-                    .format({"Corrélation": "{:.3f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"})
-                )
-                st.dataframe(styled, use_container_width=True, height=min(400, 40 + len(df_signal) * 36))
+                for _, row in df_signal.iterrows():
+                    col_info, col_btn = st.columns([4, 1])
+                    with col_info:
+                        verdict_icon = "✅" if "✅" in row["Verdict"] else ("⚠️" if "⚠️" in row["Verdict"] else "❌")
+                        st.markdown(
+                            f"**{row['Paire']}** &nbsp;·&nbsp; "
+                            f"{row['Signal']} &nbsp;·&nbsp; "
+                            f"corr **{row['Corrélation']:.3f}** &nbsp;·&nbsp; "
+                            f"p **{row['p-value']:.4f}** &nbsp;·&nbsp; "
+                            f"hl **{row['Half-Life (j)']} j** &nbsp;·&nbsp; "
+                            f"z **{row['Z-Score']:.2f}** &nbsp; {verdict_icon}"
+                        )
+                    with col_btn:
+                        pair_a, pair_b = row["Paire"].split(" / ")
+                        if st.button("Analyser →", key=f"btn_{row['Paire']}"):
+                            st.session_state.prefill_a = pair_a
+                            st.session_state.prefill_b = pair_b
+                            st.rerun()
 
             # Tableau complet (toutes les paires)
             st.markdown("#### Toutes les paires")
