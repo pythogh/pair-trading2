@@ -320,22 +320,28 @@ else:
             hide_index=True,
         )
 
-# ── Analyse de paire ─────────────────────────────────────────────────────────
+# ── Backtest ──────────────────────────────────────────────────────────────────
 st.divider()
-st.markdown("#### Analyse d'une paire")
+st.markdown("#### Backtest")
 
 keys = list(CRYPTOS.keys())
 default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
 default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-ctrl1, ctrl2, ctrl3, ctrl4, _ = st.columns([1.0, 1.0, 0.6, 0.5, 1.9])
-with ctrl1:
+c1, c2, c3, c4, c5, c6, c7 = st.columns([1.0, 1.0, 0.6, 0.6, 0.6, 0.5, 0.8])
+with c1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
-with ctrl2:
+with c2:
     name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
-with ctrl3:
+with c3:
     capital = st.number_input("Capital ($)", value=1000, step=100)
-with ctrl4:
+with c4:
+    entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
+with c5:
+    exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
+with c6:
+    stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+with c7:
     st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
     analyse = st.button("Analyser")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -377,16 +383,6 @@ else:
         m        = bt["m"]
         alloc_a  = bt["alloc_a"]
         alloc_b  = bt["alloc_b"]
-
-        st.markdown("#### Backtest")
-
-        bp1, bp2, bp3, _ = st.columns([1.0, 1.0, 0.6, 1.9])
-        with bp1:
-            entry_z = st.number_input("Seuil d'entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
-        with bp2:
-            exit_z  = st.number_input("Seuil de sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
-        with bp3:
-            stop_z  = st.number_input("Stop-loss (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
 
         z_score_series = m["z_score"].dropna()
         df_prices = m["df"]
