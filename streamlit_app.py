@@ -425,20 +425,52 @@ else:
         st.info("Aucun signal actif sur les paires calculées.")
     else:
         def _color_verdict(val):
-            if "✅" in str(val): return "background-color: rgba(29,158,117,0.15)"
-            if "⚠️" in str(val): return "background-color: rgba(239,159,39,0.15)"
-            return "background-color: rgba(226,75,74,0.1)"
+            if "✅" in str(val): return "background-color:#e8f7f1;color:#0F6E56"
+            if "⚠️" in str(val): return "background-color:#fef3e2;color:#854F0B"
+            return "background-color:#fdf0f0;color:#A32D2D"
+
+        def _color_corr(val):
+            # Seuil > 0.7 → vert si au-dessus
+            try:
+                v = float(val)
+                if v >= 0.7: return "background-color:#e8f7f1;color:#0F6E56"
+                if v >= 0.5: return "background-color:#fef3e2;color:#854F0B"
+                return "background-color:#fdf0f0;color:#A32D2D"
+            except: return ""
+
         def _color_p(val):
-            try: return "color: #1D9E75" if float(val) < 0.05 else "color: #E24B4A"
+            # Seuil < 0.05 → vert si en dessous
+            try:
+                v = float(val)
+                if v < 0.05:  return "background-color:#e8f7f1;color:#0F6E56"
+                if v < 0.15:  return "background-color:#fef3e2;color:#854F0B"
+                return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
+
+        def _color_hl(val):
+            # Seuil 5–15 jours → vert si dans la plage
+            try:
+                v = float(str(val).replace(" j","").replace("∞","9999"))
+                if 5 <= v <= 15: return "background-color:#e8f7f1;color:#0F6E56"
+                if v < 30:       return "background-color:#fef3e2;color:#854F0B"
+                return "background-color:#fdf0f0;color:#A32D2D"
+            except: return ""
+
         def _color_z(val):
-            try: return "font-weight:500;color:#E24B4A" if abs(float(val)) > 2 else ""
+            # Signal actif = |z| > 2 → rouge (opportunité tendue)
+            try:
+                v = abs(float(val))
+                if v > 2: return "background-color:#fdf0f0;color:#A32D2D;font-weight:500"
+                return "background-color:#e8f7f1;color:#0F6E56"
             except: return ""
+
         st.dataframe(
             df_tab1_signal.reset_index(drop=True).style
             .applymap(_color_verdict, subset=["Verdict"])
-            .applymap(_color_p, subset=["p-value"])
-            .applymap(_color_z, subset=["Z-Score"])
+            .applymap(_color_corr,    subset=["Corrélation"])
+            .applymap(_color_p,       subset=["p-value"])
+            .applymap(_color_hl,      subset=["Half-Life (j)"])
+            .applymap(_color_z,       subset=["Z-Score"])
             .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
             use_container_width=True,
             hide_index=True,
