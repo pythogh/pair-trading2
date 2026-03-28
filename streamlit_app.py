@@ -331,26 +331,6 @@ with ctrl4:
     analyse = st.button("Analyser")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ── Analyse de paire ─────────────────────────────────────────────────────────
-st.divider()
-st.markdown("#### Analyse d'une paire")
-
-keys = list(CRYPTOS.keys())
-default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
-default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
-
-ctrl1, ctrl2, ctrl3, ctrl4, _ = st.columns([1.2, 1.2, 0.8, 0.6, 1.2])
-with ctrl1:
-    name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
-with ctrl2:
-    name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
-with ctrl3:
-    capital = st.number_input("Capital ($)", value=1000, step=100)
-with ctrl4:
-    st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-    analyse = st.button("Analyser")
-    st.markdown("</div>", unsafe_allow_html=True)
-
 if name_a == name_b:
     st.warning("Choisis deux actifs différents.")
 else:
