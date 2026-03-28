@@ -394,7 +394,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1px dashed #e0ddd6;border-radius:8px;padding:14px 14px 14px;height:150px;display:flex;flex-direction:column;">
+            f"""<div style="border:1px solid #e0ddd6;border-radius:8px;padding:14px 14px 14px;height:220px;display:flex;flex-direction:column;">
             <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 10px">Seuil : {info['seuil']}</p>
             <p style="font-size:14px;font-family:Georgia,serif;text-align:center;margin:0 0 10px;color:#333">{info['formule']}</p>
@@ -484,46 +484,139 @@ with right:
                 alloc_a = capital / (1 + ratio)
                 alloc_b = capital - alloc_a
 
+                # Verdict
+                if m["verdict_color"] == "green":
+                    st.success(f"**{m['Verdict']}** — co-intégration solide, half-life rapide.")
+                elif m["verdict_color"] == "orange":
+                    st.warning(f"**{m['Verdict']}** — co-intégration ok mais paire lente.")
+                else:
+                    st.error(f"**{m['Verdict']}** — co-intégration insuffisante.")
+
+                if abs(z) > 2:
+                    st.error(f"🚨 **Signal : {m['Signal']}**\n\n→ {name_a} : **{alloc_a:.0f}$**  ·  {name_b} : **{alloc_b:.0f}$**")
+                else:
+                    st.info(f"😴 **{m['Signal']}** — z-score neutre ({z})")
+
+                st.divider()
+                c1, c2, c3, c4, c5 = st.columns(5)
+                c1.metric("Corrélation", m["Corrélation"])
+                c2.metric("Hedge Ratio β", m["Hedge Ratio (β)"])
+                c3.metric("Co-intégration p", m["Co-intégration (p)"])
+                c4.metric("Half-Life", f"{m['Half-Life (jours)']} j")
+                c5.metric("Z-Score", m["Z-Score"])
+
+                # ── BACKTEST ──────────────────────────────────────────────────
                 st.divider()
                 st.markdown("#### Backtest")
+
+                # Paramètres affichés et modifiables
+                bp1, bp2, bp3 = st.columns(3)
+                with bp1:
+                    entry_z  = st.number_input("Seuil d'entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
+                with bp2:
+                    exit_z   = st.number_input("Seuil de sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
+                with bp3:
+                    stop_z   = st.number_input("Stop-loss (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+
                 z_score_series = m["z_score"].dropna()
-                entry_z = 2.0
-                trades = []
+                df_prices      = m["df"]   # colonnes A et B avec les prix réels
+
+                trades   = []
                 position = None
+
                 for date, z_val in z_score_series.items():
+                    if date not in df_prices.index:
+                        continue
+                    price_a = df_prices.loc[date, "A"]
+                    price_b = df_prices.loc[date, "B"]
+
                     if position is None:
+                        # Entrée : z dépasse le seuil
                         if z_val > entry_z:
-                            position = {"type": "SHORT_A", "entry_z": z_val, "entry_date": date}
+                            # z trop haut → A sur-valorisé vs B → SHORT A / LONG B
+                            # On vend A et achète B proportionnellement au beta
+                            units_a = alloc_a / price_a
+                            units_b = alloc_b / price_b
+                            position = {
+                                "type": f"SHORT {name_a} / LONG {name_b}",
+                                "entry_date": date,
+                                "entry_z": z_val,
+                                "entry_price_a": price_a,
+                                "entry_price_b": price_b,
+                                "units_a": units_a,
+                                "units_b": units_b,
+                                "direction": "short_a",
+                            }
                         elif z_val < -entry_z:
-                            position = {"type": "LONG_A", "entry_z": z_val, "entry_date": date}
+                            # z trop bas → A sous-valorisé vs B → LONG A / SHORT B
+                            units_a = alloc_a / price_a
+                            units_b = alloc_b / price_b
+                            position = {
+                                "type": f"LONG {name_a} / SHORT {name_b}",
+                                "entry_date": date,
+                                "entry_z": z_val,
+                                "entry_price_a": price_a,
+                                "entry_price_b": price_b,
+                                "units_a": units_a,
+                                "units_b": units_b,
+                                "direction": "long_a",
+                            }
                     else:
-                        if (position["type"] == "SHORT_A" and z_val < 0) or (position["type"] == "LONG_A" and z_val > 0):
-                            pnl = abs(position["entry_z"]) - abs(z_val)
+                        # Conditions de sortie
+                        exit_normal = (
+                            (position["direction"] == "short_a" and z_val < exit_z) or
+                            (position["direction"] == "long_a"  and z_val > -exit_z)
+                        )
+                        exit_stop = abs(z_val) > stop_z
+
+                        if exit_normal or exit_stop:
+                            # P&L réel en $ sur chaque jambe
+                            if position["direction"] == "short_a":
+                                # SHORT A : on a vendu A à l'entrée, on le rachète à la sortie
+                                pnl_a = (position["entry_price_a"] - price_a) * position["units_a"]
+                                # LONG B : on a acheté B à l'entrée, on le revend à la sortie
+                                pnl_b = (price_b - position["entry_price_b"]) * position["units_b"]
+                            else:
+                                # LONG A
+                                pnl_a = (price_a - position["entry_price_a"]) * position["units_a"]
+                                # SHORT B
+                                pnl_b = (position["entry_price_b"] - price_b) * position["units_b"]
+
+                            pnl_total = pnl_a + pnl_b
+                            raison    = "Stop-loss" if exit_stop else "Retour à la moyenne"
+
                             trades.append({
-                                "entrée": position["entry_date"].strftime("%Y-%m-%d"),
-                                "sortie": date.strftime("%Y-%m-%d"),
-                                "type": position["type"].replace("_", " "),
-                                "z entrée": round(position["entry_z"], 2),
-                                "z sortie": round(z_val, 2),
-                                "résultat": "✅ Gagnant" if pnl > 0 else "❌ Perdant",
+                                "entrée":    position["entry_date"].strftime("%Y-%m-%d"),
+                                "sortie":    date.strftime("%Y-%m-%d"),
+                                "type":      position["type"],
+                                "z entrée":  round(position["entry_z"], 2),
+                                "z sortie":  round(z_val, 2),
+                                "P&L A ($)": round(pnl_a, 2),
+                                "P&L B ($)": round(pnl_b, 2),
+                                "P&L ($)":   round(pnl_total, 2),
+                                "raison":    raison,
+                                "résultat":  "✅ Gagnant" if pnl_total > 0 else "❌ Perdant",
                             })
                             position = None
 
                 if not trades:
-                    st.info("Aucun trade déclenché sur la période.")
+                    st.info("Aucun trade déclenché sur la période avec ces paramètres.")
                 else:
-                    df_trades = pd.DataFrame(trades)
-                    n_trades = len(df_trades)
-                    n_win = len(df_trades[df_trades["résultat"].str.contains("Gagnant")])
-                    win_rate = n_win / n_trades if n_trades > 0 else 0
-                    pnl_values, cum_pnl = [], 0
-                    for _, t in df_trades.iterrows():
-                        cum_pnl += (abs(t["z entrée"]) - abs(t["z sortie"])) * capital * 0.01
-                        pnl_values.append(cum_pnl)
-                    total_pnl = pnl_values[-1] if pnl_values else 0
-                    max_dd = min(0, min(pnl_values)) if pnl_values else 0
-                    returns = pd.Series(pnl_values).diff().dropna()
-                    sharpe = (returns.mean() / returns.std() * np.sqrt(252)) if returns.std() > 0 else 0
+                    df_trades  = pd.DataFrame(trades)
+                    n_trades   = len(df_trades)
+                    n_win      = (df_trades["P&L ($)"] > 0).sum()
+                    win_rate   = n_win / n_trades
+                    pnl_values = df_trades["P&L ($)"].cumsum().tolist()
+                    total_pnl  = pnl_values[-1]
+
+                    # Drawdown max
+                    cummax     = pd.Series(pnl_values).cummax()
+                    drawdowns  = pd.Series(pnl_values) - cummax
+                    max_dd     = drawdowns.min()
+
+                    # Sharpe (rendements par trade)
+                    rets   = df_trades["P&L ($)"]
+                    sharpe = (rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0
 
                     b1, b2, b3, b4, b5 = st.columns(5)
                     b1.metric("P&L cumulé", f"{total_pnl:+.0f}$")
@@ -533,9 +626,21 @@ with right:
                     b5.metric("Sharpe", f"{sharpe:.2f}")
 
                     fig_pnl = go.Figure()
-                    fig_pnl.add_trace(go.Scatter(x=list(range(len(pnl_values))), y=pnl_values, mode="lines+markers", line=dict(color="#1D9E75", width=1.5), marker=dict(size=5)))
+                    fig_pnl.add_trace(go.Scatter(
+                        x=list(range(1, n_trades + 1)), y=pnl_values,
+                        mode="lines+markers",
+                        line=dict(color="#1D9E75", width=1.5),
+                        marker=dict(
+                            size=7,
+                            color=["#1D9E75" if p > 0 else "#E24B4A" for p in df_trades["P&L ($)"]],
+                        )
+                    ))
                     fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
-                    fig_pnl.update_layout(title=dict(text="P&L cumulé par trade", font=dict(size=12)), height=200, margin=dict(t=36, b=16, l=40, r=16), plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False)
+                    fig_pnl.update_layout(
+                        title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
+                        height=220, margin=dict(t=36, b=16, l=40, r=16),
+                        plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
+                    )
                     fig_pnl.update_xaxes(title_text="Trade #", showgrid=False, tickfont=dict(size=10))
                     fig_pnl.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
                     st.plotly_chart(fig_pnl, use_container_width=True)
