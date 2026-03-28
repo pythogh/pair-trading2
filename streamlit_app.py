@@ -394,12 +394,10 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1px solid #e0ddd6;border-radius:8px;padding:14px 14px 16px;height:220px;display:flex;flex-direction:column;justify-content:space-between;">
-            <div>
-                <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
-                <p style="font-size:10px;color:#aaa;margin:0 0 6px">Seuil : {info['seuil']}</p>
-                <p style="font-size:14px;font-family:Georgia,serif;text-align:center;margin:0 0 6px;color:#333">{info['formule']}</p>
-            </div>
+            f"""<div style="border:1px solid #e0ddd6;border-radius:8px;padding:14px 14px 14px;height:220px;display:flex;flex-direction:column;">
+            <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 10px">Seuil : {info['seuil']}</p>
+            <p style="font-size:14px;font-family:Georgia,serif;text-align:center;margin:0 0 10px;color:#333">{info['formule']}</p>
             <p style="font-size:11px;color:#888;line-height:1.5;margin:0">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
