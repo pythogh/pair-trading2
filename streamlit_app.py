@@ -304,14 +304,11 @@ else:
             try:
                 v = abs(float(val))
                 if v > 2: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
-                return "background-color:#fdf0f0;color:#A32D2D"
+                return ""  # neutre si pas de signal
             except: return ""
 
         def _color_signal(val):
-            s = str(val)
-            if s.startswith("SHORT"): return "color:#A32D2D;font-weight:500"
-            if s.startswith("LONG"):  return "color:#0F6E56;font-weight:500"
-            return "color:#aaa"
+            return ""  # pas de coloration sur le signal
 
         st.dataframe(
             df_tab1_signal.reset_index(drop=True).style
