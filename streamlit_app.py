@@ -112,20 +112,16 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     except Exception:
         half_life = float("inf")
 
-    if p_value < 0.05 and half_life < 15 and correlation >= 0.7 and abs(current_z) > 2:
+    ok_corr = correlation >= 0.7
+    ok_p    = p_value < 0.05
+    ok_hl   = half_life < 15
+    ok_z    = abs(current_z) > 2
+
+    if ok_corr and ok_p and ok_hl and ok_z:
         verdict = "✅ Valide"
         verdict_color = "green"
-    elif p_value < 0.05 and half_life < 15 and correlation >= 0.7:
-        verdict = "⚠️ Pas de signal"
-        verdict_color = "orange"
-    elif p_value < 0.05 and half_life < 15:
-        verdict = "⚠️ Corrélation faible"
-        verdict_color = "orange"
-    elif p_value < 0.05:
-        verdict = "⚠️ Lente"
-        verdict_color = "orange"
     else:
-        verdict = "❌ Faible"
+        verdict = "❌ Non valide"
         verdict_color = "red"
 
     if current_z > 2:
@@ -263,16 +259,13 @@ else:
     else:
         df_tab1_signal = df_tab1.copy()
 
-    verdict_order = {"✅ Valide": 0, "⚠️ Pas de signal": 1, "⚠️ Lente": 2, "⚠️ Corrélation faible": 3, "❌ Faible": 4}
-    df_tab1_signal["_sort"] = df_tab1_signal["Verdict"].map(verdict_order).fillna(3)
-    df_tab1_signal = df_tab1_signal.sort_values("_sort").drop(columns=["_sort"])
+    df_tab1_signal = df_tab1_signal.sort_values("Verdict").reset_index(drop=True)
 
     if df_tab1_signal.empty:
         st.info("Aucun signal actif sur les paires calculées.")
     else:
         def _color_verdict(val):
             if "✅" in str(val): return "background-color:#e8f7f1;color:#0F6E56"
-            if "⚠️" in str(val): return "background-color:#fef3e2;color:#854F0B"
             return "background-color:#fdf0f0;color:#A32D2D"
 
         def _color_corr(val):
