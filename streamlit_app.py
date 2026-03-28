@@ -123,9 +123,9 @@ def compute_metrics(series_a, series_b, name_a, name_b):
         verdict_color = "red"
 
     if current_z > 2:
-        signal = f"SHORT {name_a} / LONG {name_b}"
+        signal = f"↓ {name_a} / ↑ {name_b}"
     elif current_z < -2:
-        signal = f"LONG {name_a} / SHORT {name_b}"
+        signal = f"↑ {name_a} / ↓ {name_b}"
     else:
         signal = "Pas de signal"
 
@@ -294,6 +294,13 @@ else:
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
 
+        def _color_signal(val):
+            if "↑" in str(val) and "↓" in str(val):
+                return "color:#1a1a1a"  # mixte, on laisse neutre
+            if "↑" in str(val): return "color:#0F6E56;font-weight:500"
+            if "↓" in str(val): return "color:#A32D2D;font-weight:500"
+            return ""
+
         st.dataframe(
             df_tab1_signal.reset_index(drop=True).style
             .applymap(_color_verdict,  subset=["Verdict"])
@@ -301,6 +308,7 @@ else:
             .applymap(_color_p,        subset=["Co-intégration p"])
             .applymap(_color_hl,       subset=["Half-Life"])
             .applymap(_color_z,        subset=["Z-Score"])
+            .applymap(_color_signal,   subset=["Signal"])
             .format({
                 "Corrélation":      "{:.3f}",
                 "Hedge Ratio β":    "{:.4f}",
