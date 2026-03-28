@@ -37,14 +37,9 @@ button[data-baseweb="tab"] { font-size: 12px !important; }
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p {
     margin-bottom: 0 !important;
 }
-/* Hauteur uniforme : étirer tous les containers bordés dans la même rangée de colonnes */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    height: 100% !important;
-}
-[data-testid="stVerticalBlockBorderWrapper"] > div:first-child {
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
+/* Hauteur uniforme : min-height fixe sur le contenu interne */
+[data-testid="stVerticalBlockBorderWrapper"] > div:first-child > div[data-testid="stVerticalBlock"] {
+    min-height: 200px !important;
 }
 </style>
 """, unsafe_allow_html=True)
