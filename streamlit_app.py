@@ -352,53 +352,58 @@ if not st.session_state["matrix_results"] or _stale:
 
 # ══ MÉTRIQUES ══════════════════════════════════════════════════════════════════
 
-METRICS_COMPACT = {
-    "Corrélation": {
+METRICS_COMPACT = [
+    {
         "emoji": "📊",
+        "name": "Corrélation",
         "seuil": "> 0.7",
-        "latex": r"\rho = \frac{\text{cov}(r_A,\, r_B)}{\sigma_A \cdot \sigma_B}",
+        "formule": "ρ = cov(r<sub>A</sub>, r<sub>B</sub>) / (σ<sub>A</sub> · σ<sub>B</sub>)",
         "note": "Calculée sur les rendements journaliers (pas les prix). Mesure si les deux actifs bougent dans le même sens.",
     },
-    "Hedge Ratio β": {
+    {
         "emoji": "⚖️",
+        "name": "Hedge Ratio β",
         "seuil": "Pas de seuil",
-        "latex": r"\beta = \frac{\text{cov}(A,\, B)}{\text{var}(B)}",
+        "formule": "β = cov(A, B) / var(B)",
         "note": "Régression OLS de A sur B. Indique combien d'unités de B couvrent 1 unité de A.",
     },
-    "Co-intégration p": {
+    {
         "emoji": "🔬",
+        "name": "Co-intégration p",
         "seuil": "< 0.05",
-        "latex": r"\text{ADF}(A - \beta B - \alpha)",
+        "formule": "ADF(A − βB − α) → p-value",
         "note": "Test de stationnarité du spread. Si p < 0.05, l'écart entre les deux prix revient toujours à sa moyenne.",
     },
-    "Half-Life": {
+    {
         "emoji": "⏳",
+        "name": "Half-Life",
         "seuil": "5–15 jours",
-        "latex": r"t_{1/2} = \frac{\ln 2}{\lambda}, \quad \Delta s_t = \lambda\, s_{t-1}",
+        "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
         "note": "Modèle Ornstein-Uhlenbeck. Temps moyen pour que l'écart se réduise de moitié.",
     },
-    "Z-Score": {
+    {
         "emoji": "🌡️",
+        "name": "Z-Score",
         "seuil": "Signal si |z| > 2",
-        "latex": r"z = \frac{s_t - \mu_{30}}{\sigma_{30}}",
+        "formule": "z = (s<sub>t</sub> − μ<sub>30</sub>) / σ<sub>30</sub>",
         "note": "Fenêtre glissante 30 jours. Un z > +2 se produit ~2.5% du temps — signal de trading.",
     },
-}
+]
 
 cols = st.columns(5)
-for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
+for col, info in zip(cols, METRICS_COMPACT):
     with col:
-        with st.container(border=True):
-            st.markdown(
-                f"<p style='font-size:12px;font-weight:500;margin:0 0 2px'>{info['emoji']} {name}</p>"
-                f"<p style='font-size:10px;color:#999;margin:0 0 4px'>Seuil : {info['seuil']}</p>",
-                unsafe_allow_html=True
-            )
-            st.latex(info["latex"])
-            st.markdown(
-                f"<p style='font-size:11px;color:#888;line-height:1.5;margin:4px 0 8px'>{info['note']}</p>",
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            f"""<div style="border:1px solid #e0ddd6;border-radius:8px;padding:14px 14px 16px;height:220px;display:flex;flex-direction:column;justify-content:space-between;">
+            <div>
+                <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
+                <p style="font-size:10px;color:#aaa;margin:0 0 12px">Seuil : {info['seuil']}</p>
+                <p style="font-size:14px;font-family:Georgia,serif;text-align:center;margin:0 0 12px;color:#333">{info['formule']}</p>
+            </div>
+            <p style="font-size:11px;color:#888;line-height:1.5;margin:0">{info['note']}</p>
+            </div>""",
+            unsafe_allow_html=True
+        )
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
