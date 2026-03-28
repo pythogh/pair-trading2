@@ -29,6 +29,17 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
 .stApp { background-color: #ffffff !important; }
+/* Hauteur uniforme sur les blocs métriques */
+[data-testid="stColumns"]:first-of-type [data-testid="stVerticalBlockBorderWrapper"] {
+    height: 100% !important;
+    min-height: 320px !important;
+}
+[data-testid="stColumns"]:first-of-type [data-testid="stVerticalBlockBorderWrapper"] > div {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -378,17 +389,17 @@ for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
     with col:
         with st.container(border=True):
             st.markdown(
+                f"<div style='min-height:280px;display:flex;flex-direction:column;padding-bottom:8px'>"
                 f"<p style='font-size:12px;font-weight:500;margin:0 0 2px'>{info['emoji']} {name}</p>"
-                f"<p style='font-size:10px;color:#999;margin:0 0 4px'>Seuil : {info['seuil']}</p>",
+                f"<p style='font-size:10px;color:#999;margin:0 0 4px'>Seuil : {info['seuil']}</p>"
+                f"</div>",
                 unsafe_allow_html=True
             )
             st.latex(info["latex"])
             st.markdown(
-                f"<p style='font-size:11px;color:#888;line-height:1.5;margin:4px 0 0'>{info['note']}</p>",
+                f"<p style='font-size:11px;color:#888;line-height:1.5;margin:4px 0 16px'>{info['note']}</p>",
                 unsafe_allow_html=True
             )
-
-
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
