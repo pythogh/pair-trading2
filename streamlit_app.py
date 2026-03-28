@@ -1,5 +1,6 @@
 import os
 import glob
+import requests
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -46,6 +47,7 @@ button[data-baseweb="tab"] { font-size: 12px !important; }
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_DIR = "data"
+API_KEY  = "CG-zQg6pyzA4RPm5Tti2p7RTsn2"
 
 def scan_tokens():
     """Scanne le dossier data/ et construit le dict {Nom: slug} depuis les noms de fichiers."""
@@ -339,9 +341,9 @@ if not st.session_state["matrix_results"] or _stale:
         results_auto.append({
             "Paire": f"{a} / {b}",
             "Corrélation": m["Corrélation"],
-            "Beta (β)": m["Hedge Ratio (β)"],
-            "p-value": m["Co-intégration (p)"],
-            "Half-Life (j)": m["Half-Life (jours)"],
+            "Hedge Ratio β": m["Hedge Ratio (β)"],
+            "Co-intégration p": m["Co-intégration (p)"],
+            "Half-Life": m["Half-Life (jours)"],
             "Z-Score": m["Z-Score"],
             "Verdict": m["Verdict"],
             "Signal": m["Signal"],
@@ -424,40 +426,33 @@ else:
     if df_tab1_signal.empty:
         st.info("Aucun signal actif sur les paires calculées.")
     else:
+
         def _color_verdict(val):
             if "✅" in str(val): return "background-color:#e8f7f1;color:#0F6E56"
             if "⚠️" in str(val): return "background-color:#fef3e2;color:#854F0B"
             return "background-color:#fdf0f0;color:#A32D2D"
-
         def _color_corr(val):
-            # Seuil > 0.7 → vert si au-dessus
             try:
                 v = float(val)
                 if v >= 0.7: return "background-color:#e8f7f1;color:#0F6E56"
                 if v >= 0.5: return "background-color:#fef3e2;color:#854F0B"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
-
         def _color_p(val):
-            # Seuil < 0.05 → vert si en dessous
             try:
                 v = float(val)
                 if v < 0.05:  return "background-color:#e8f7f1;color:#0F6E56"
                 if v < 0.15:  return "background-color:#fef3e2;color:#854F0B"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
-
         def _color_hl(val):
-            # Seuil 5–15 jours → vert si dans la plage
             try:
                 v = float(str(val).replace(" j","").replace("∞","9999"))
                 if 5 <= v <= 15: return "background-color:#e8f7f1;color:#0F6E56"
                 if v < 30:       return "background-color:#fef3e2;color:#854F0B"
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
-
         def _color_z(val):
-            # Signal actif = |z| > 2 → vert (opportunité détectée)
             try:
                 v = abs(float(val))
                 if v > 2: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
@@ -468,10 +463,10 @@ else:
             df_tab1_signal.reset_index(drop=True).style
             .applymap(_color_verdict, subset=["Verdict"])
             .applymap(_color_corr,    subset=["Corrélation"])
-            .applymap(_color_p,       subset=["p-value"])
-            .applymap(_color_hl,      subset=["Half-Life (j)"])
+            .applymap(_color_p,       subset=["Co-intégration p"])
+            .applymap(_color_hl,      subset=["Half-Life"])
             .applymap(_color_z,       subset=["Z-Score"])
-            .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
+            .format({"Corrélation": "{:.3f}", "Hedge Ratio β": "{:.4f}", "Co-intégration p": "{:.4f}", "Z-Score": "{:.2f}"}),
             use_container_width=True,
             hide_index=True,
         )
