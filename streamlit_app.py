@@ -444,14 +444,13 @@ with tabs[2]:
         pairs = list(combinations(selected, 2))
         progress = st.progress(0, text="Chargement des données...")
 
-        # Téléchargement avec délai pour respecter le rate limit
+        # Lecture locale — pas de rate limit, pas de délai
         cache = {}
         errors = []
         for i, name in enumerate(selected):
             cache[name], err = fetch_prices(CRYPTOS[name])
             if err:
                 errors.append(f"{name} : {err}")
-            time.sleep(1)
             progress.progress((i + 1) / len(selected), text=f"Chargement {name}...")
 
         if errors:
