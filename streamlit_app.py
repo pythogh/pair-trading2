@@ -442,7 +442,6 @@ else:
             .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
             use_container_width=True,
             hide_index=True,
-            height=38 + len(df_tab1_signal) * 35
         )
 
 # ── Analyse de paire ─────────────────────────────────────────────────────────
