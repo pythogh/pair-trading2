@@ -306,6 +306,35 @@ if "active_tab" not in st.session_state:
 if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
 
+# ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
+if not st.session_state["matrix_results"]:
+    all_names = list(CRYPTOS.keys())
+    pairs = list(combinations(all_names, 2))
+    bar = st.progress(0, text="Calcul des paires en cours...")
+    price_cache = {}
+    for i, name in enumerate(all_names):
+        price_cache[name], _ = fetch_prices(CRYPTOS[name])
+    results_auto = []
+    for i, (a, b) in enumerate(pairs):
+        bar.progress((i + 1) / len(pairs), text=f"Calcul {a} / {b}…")
+        if price_cache.get(a) is None or price_cache.get(b) is None:
+            continue
+        m = compute_metrics(price_cache[a], price_cache[b], a, b)
+        if m is None:
+            continue
+        results_auto.append({
+            "Paire": f"{a} / {b}",
+            "Corrélation": m["Corrélation"],
+            "Beta (β)": m["Hedge Ratio (β)"],
+            "p-value": m["Co-intégration (p)"],
+            "Half-Life (j)": m["Half-Life (jours)"],
+            "Z-Score": m["Z-Score"],
+            "Verdict": m["Verdict"],
+            "Signal": m["Signal"],
+        })
+    st.session_state["matrix_results"] = results_auto
+    bar.empty()
+
 tabs = st.tabs(["📚 Les 5 métriques", "🔍 Analyse d'une paire", "🗺️ Matrice des paires"])
 
 # ══ TAB 1 — MÉTRIQUES ══════════════════════════════════════════════════════════
