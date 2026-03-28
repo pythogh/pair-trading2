@@ -10,6 +10,90 @@ from itertools import combinations
 
 st.set_page_config(page_title="Pair Trading Analyzer", layout="wide")
 
+st.markdown("""
+<style>
+/* Police globale plus petite */
+html, body, [class*="css"] {
+    font-size: 13px !important;
+}
+
+/* Titre de page */
+h1 { font-size: 18px !important; font-weight: 500 !important; }
+h2 { font-size: 14px !important; font-weight: 500 !important; }
+h3 { font-size: 13px !important; font-weight: 500 !important; }
+
+/* Sidebar plus étroite et sobre */
+[data-testid="stSidebar"] {
+    background-color: #fafaf8 !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+}
+[data-testid="stSidebar"] label {
+    font-size: 11px !important;
+    color: #888 !important;
+}
+
+/* Bouton sobre */
+.stButton > button {
+    background: #1a1a1a !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    padding: 4px 16px !important;
+    height: 32px !important;
+}
+.stButton > button:hover {
+    background: #333 !important;
+}
+
+/* Métriques plus compactes */
+[data-testid="metric-container"] {
+    background: #f7f6f3 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    border: none !important;
+}
+[data-testid="stMetricLabel"] {
+    font-size: 10px !important;
+    color: #999 !important;
+}
+[data-testid="stMetricValue"] {
+    font-size: 20px !important;
+    font-weight: 500 !important;
+}
+
+/* Selectbox et inputs */
+[data-testid="stSelectbox"] label,
+[data-testid="stNumberInput"] label {
+    font-size: 11px !important;
+    color: #888 !important;
+}
+
+/* Supprimer le fond coloré des alertes, garder sobre */
+[data-testid="stAlert"] {
+    font-size: 12px !important;
+    padding: 8px 14px !important;
+}
+
+/* Tabs plus fins */
+[data-testid="stTab"] {
+    font-size: 12px !important;
+}
+
+/* Fond principal blanc pur */
+.stApp {
+    background-color: #ffffff !important;
+}
+
+/* Enlever le padding excessif en haut */
+.block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ─────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────
