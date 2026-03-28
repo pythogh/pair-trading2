@@ -1,8 +1,8 @@
-import time
+import os
+import glob
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import adfuller
 import plotly.graph_objects as go
@@ -33,20 +33,24 @@ button[data-baseweb="tab"] { font-size: 12px !important; }
 """, unsafe_allow_html=True)
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
-API_KEY = "CG-zQg6pyzA4RPm5Tti2p7RTsn2"
+DATA_DIR = "data"
 
-CRYPTOS = {
-    "Bitcoin":     "bitcoin",
-    "Ethereum":    "ethereum",
-    "Aave":        "aave",
-    "Pendle":      "pendle",
-    "Morpho":      "morpho",
-    "Pump.fun":    "pump-fun",
-    "LayerZero":   "layerzero",
-    "Hyperliquid": "hyperliquid",
-    "Syrup":       "maple-finance",
-    "Fluid":       "fluid",
-}
+def scan_tokens():
+    """Scanne le dossier data/ et construit le dict {Nom: slug} depuis les noms de fichiers."""
+    files = glob.glob(os.path.join(DATA_DIR, "*-historical-data.csv"))
+    tokens = {}
+    for f in sorted(files):
+        slug = os.path.basename(f).replace("-historical-data.csv", "")
+        label = slug.replace("-", " ").title()
+        tokens[label] = slug
+    return tokens
+
+CRYPTOS = scan_tokens()
+
+if not CRYPTOS:
+    st.error(f"Aucun fichier trouvé dans `{DATA_DIR}/`. Vérifie que tes CSV sont bien au format `nom-historical-data.csv`.")
+    st.stop()
+
 
 METRICS_INFO = {
     "Corrélation": {
@@ -189,26 +193,39 @@ Z = 0   →  spread exactement à sa moyenne, équilibre parfait
 
 # ─── FONCTIONS ─────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
-def fetch_prices(coin_id, days=180):
-    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-    params = {"vs_currency": "usd", "days": days, "interval": "daily"}
-    headers = {"x-cg-demo-api-key": API_KEY}
+def fetch_prices(slug):
+    path = os.path.join(DATA_DIR, f"{slug}-historical-data.csv")
+    if not os.path.exists(path):
+        return None, f"Fichier introuvable : {slug}-historical-data.csv"
     try:
-        r = requests.get(url, params=params, headers=headers, timeout=15)
-        if r.status_code == 429:
-            time.sleep(12)
-            r = requests.get(url, params=params, headers=headers, timeout=15)
-        if r.status_code != 200:
-            return None, f"Erreur API {r.status_code} pour {coin_id}"
-        prices = r.json().get("prices", [])
-        if len(prices) < 40:
-            return None, f"{coin_id} : historique insuffisant ({len(prices)} jours disponibles)"
-        df = pd.DataFrame(prices, columns=["timestamp", "price"])
-        df["date"] = pd.to_datetime(df["timestamp"], unit="ms").dt.normalize()
-        df = df.drop_duplicates("date").set_index("date")["price"]
-        return df, None
+        df = pd.read_csv(path)
+
+        # Nettoyage : retire $ et virgilles des colonnes numériques
+        for col in df.columns:
+            if col != "Date":
+                df[col] = (
+                    df[col].astype(str)
+                    .str.replace("$", "", regex=False)
+                    .str.replace(",", "", regex=False)
+                    .str.strip()
+                )
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.sort_values("Date").set_index("Date")
+
+        if "Close" not in df.columns:
+            return None, f"Colonne 'Close' introuvable dans {slug}-historical-data.csv"
+
+        series = df["Close"].dropna()
+
+        if len(series) < 40:
+            return None, f"{slug} : seulement {len(series)} jours disponibles (minimum 40)"
+
+        return series, None
     except Exception as e:
-        return None, str(e)
+        return None, f"Erreur lecture {slug} : {str(e)}"
+
 
 
 def compute_metrics(series_a, series_b, name_a, name_b):
@@ -277,7 +294,7 @@ def compute_metrics(series_a, series_b, name_a, name_b):
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
 st.title("📈 Pair Trading Analyzer")
-st.caption("Données : CoinGecko API · 6 mois · quotidien")
+st.caption(f"Données locales · {len(CRYPTOS)} tokens disponibles · dossier `data/`")
 
 tabs = st.tabs(["📚 Les 5 métriques", "🔍 Analyse d'une paire", "🗺️ Matrice des paires"])
 
