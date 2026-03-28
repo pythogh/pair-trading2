@@ -631,21 +631,28 @@ with tabs[2]:
             st.markdown("#### Paires avec signal actif")
             df_signal = df_res[df_res["Signal"] != "Pas de signal"].copy()
 
+            # Tableau — paires avec signal actif ET co-intégration valide
+            st.markdown("#### Paires avec signal actif")
+            df_signal = df_res[
+                (df_res["Signal"] != "Pas de signal") &
+                (df_res["Verdict"] != "❌ Faible")
+            ].copy()
+
             if df_signal.empty:
-                st.info("Aucun signal actif en ce moment (z-score entre -2 et +2 sur toutes les paires).")
+                st.info("Aucune opportunité valide en ce moment — soit pas de signal z-score, soit co-intégration insuffisante.")
             else:
                 # En-tête
-                h1, h2, h3, h4, h5, h6, h7, h8 = st.columns([2.2, 1, 1, 1, 1, 1, 1.4, 0.8])
+                h1, h2, h3, h4, h5, h6, h7 = st.columns([2.2, 1, 1, 1, 1, 1, 1.8])
                 for h, label in zip(
-                    [h1, h2, h3, h4, h5, h6, h7, h8],
-                    ["Paire", "Corrélation", "Beta (β)", "p-value", "Half-Life", "Z-Score", "Signal", ""]
+                    [h1, h2, h3, h4, h5, h6, h7],
+                    ["Paire", "Corrélation", "Beta (β)", "p-value", "Half-Life", "Z-Score", "Signal"]
                 ):
                     h.markdown(f"<p style='font-size:11px;color:#999;margin:0'>{label}</p>", unsafe_allow_html=True)
                 st.divider()
 
                 for idx, row in df_signal.iterrows():
-                    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([2.2, 1, 1, 1, 1, 1, 1.4, 0.8])
-                    verdict_icon = "✅" if "✅" in row["Verdict"] else ("⚠️" if "⚠️" in row["Verdict"] else "❌")
+                    c1, c2, c3, c4, c5, c6, c7 = st.columns([2.2, 1, 1, 1, 1, 1, 1.8])
+                    verdict_icon = "✅" if "✅" in row["Verdict"] else "⚠️"
                     z_color = "#E24B4A" if abs(float(row["Z-Score"])) > 2 else "inherit"
                     p_color = "#1D9E75" if float(row["p-value"]) < 0.05 else "#E24B4A"
 
@@ -657,17 +664,21 @@ with tabs[2]:
                     c6.markdown(f"<span style='font-size:12px;font-weight:500;color:{z_color}'>{row['Z-Score']:.2f}</span>", unsafe_allow_html=True)
                     c7.markdown(f"<span style='font-size:11px'>{row['Signal']}</span>", unsafe_allow_html=True)
 
+                    # Graphe détail pleine largeur sous la ligne
                     pair_a, pair_b = row["Paire"].split(" / ")
-                    with c8:
-                        with st.expander("→ Détail"):
-                            sa, ea = fetch_prices(CRYPTOS[pair_a])
-                            sb, eb = fetch_prices(CRYPTOS[pair_b])
-                            if ea or eb:
-                                st.error(ea or eb)
-                            else:
-                                md = compute_metrics(sa, sb, pair_a, pair_b)
-                                if md:
-                                    z_s = md["z_score"].dropna()
+                    with st.expander(f"Détail z-score — {row['Paire']}", expanded=False):
+                        sa, ea = fetch_prices(CRYPTOS[pair_a])
+                        sb, eb = fetch_prices(CRYPTOS[pair_b])
+                        if ea or eb:
+                            st.error(ea or eb)
+                        else:
+                            md = compute_metrics(sa, sb, pair_a, pair_b)
+                            if md:
+                                z_s = md["z_score"].dropna()
+                                df_ab = md["df"]
+
+                                col_g1, col_g2 = st.columns(2)
+                                with col_g1:
                                     fig_z = go.Figure()
                                     fig_z.add_trace(go.Scatter(
                                         x=z_s.index, y=z_s,
@@ -677,12 +688,33 @@ with tabs[2]:
                                     for yv, col in [(2, "rgba(220,50,50,0.4)"), (-2, "rgba(220,50,50,0.4)"), (0, "rgba(180,180,180,0.4)")]:
                                         fig_z.add_hline(y=yv, line_dash="dash", line_color=col, line_width=0.8)
                                     fig_z.update_layout(
-                                        height=180, margin=dict(t=10, b=10, l=30, r=10),
+                                        title=dict(text="Z-Score", font=dict(size=11)),
+                                        height=200, margin=dict(t=30, b=10, l=30, r=10),
                                         plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
                                     )
                                     fig_z.update_xaxes(showgrid=False, tickfont=dict(size=9))
                                     fig_z.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=9))
                                     st.plotly_chart(fig_z, use_container_width=True)
+
+                                with col_g2:
+                                    fig_p = go.Figure()
+                                    fig_p.add_trace(go.Scatter(
+                                        x=df_ab.index, y=df_ab["A"] / df_ab["A"].iloc[0],
+                                        name=pair_a, line=dict(color="#1D9E75", width=1.2)
+                                    ))
+                                    fig_p.add_trace(go.Scatter(
+                                        x=df_ab.index, y=df_ab["B"] / df_ab["B"].iloc[0],
+                                        name=pair_b, line=dict(color="#7F77DD", width=1.2)
+                                    ))
+                                    fig_p.update_layout(
+                                        title=dict(text="Prix normalisés", font=dict(size=11)),
+                                        height=200, margin=dict(t=30, b=10, l=30, r=10),
+                                        plot_bgcolor="#fff", paper_bgcolor="#fff",
+                                        legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
+                                    )
+                                    fig_p.update_xaxes(showgrid=False, tickfont=dict(size=9))
+                                    fig_p.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=9))
+                                    st.plotly_chart(fig_p, use_container_width=True)
 
             # Tableau complet (toutes les paires)
             st.markdown("#### Toutes les paires")
