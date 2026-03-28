@@ -491,27 +491,69 @@ else:
 
         st.divider()
         df = m["df"]
+
+        # Préparer les dates et valeurs des marqueurs si des trades existent
+        if trades:
+            entry_dates = pd.to_datetime(df_trades["entrée"])
+            exit_dates  = pd.to_datetime(df_trades["sortie"])
+            entry_colors = ["#1D9E75" if t.startswith("LONG") else "#E24B4A" for t in df_trades["type"]]
+            exit_colors  = ["#E24B4A" if t.startswith("LONG") else "#1D9E75" for t in df_trades["type"]]
+
+        # Graphe 1 — prix normalisés
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y=df["A"]/df["A"].iloc[0], name=name_a, line=dict(color="#1D9E75", width=1.5)))
         fig.add_trace(go.Scatter(x=df.index, y=df["B"]/df["B"].iloc[0], name=name_b, line=dict(color="#7F77DD", width=1.5)))
+
+        if trades:
+            # Marqueurs d'entrée sur prix normalisé de A
+            entry_y_a = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in entry_dates]
+            exit_y_a  = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in exit_dates]
+            fig.add_trace(go.Scatter(
+                x=entry_dates, y=entry_y_a, mode="markers", name="Entrée",
+                marker=dict(symbol="triangle-up", size=10, color=entry_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="Entrée %{x}<extra></extra>"
+            ))
+            fig.add_trace(go.Scatter(
+                x=exit_dates, y=exit_y_a, mode="markers", name="Sortie",
+                marker=dict(symbol="triangle-down", size=10, color=exit_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="Sortie %{x}<extra></extra>"
+            ))
+
         fig.update_layout(
             title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-            height=220, margin=dict(t=36, b=16, l=40, r=16),
+            height=260, margin=dict(t=36, b=16, l=40, r=16),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="left", x=0, font=dict(size=11))
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11))
         )
         fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
         st.plotly_chart(fig, use_container_width=True)
 
+        # Graphe 2 — z-score
         fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=z_score_series.index, y=z_score_series, line=dict(color="#378ADD", width=1.5), fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"))
+        fig2.add_trace(go.Scatter(x=z_score_series.index, y=z_score_series, line=dict(color="#378ADD", width=1.5), fill="tozeroy", fillcolor="rgba(55,138,221,0.05)", showlegend=False))
         for y_val, color in [(2, "rgba(220,50,50,0.5)"), (-2, "rgba(220,50,50,0.5)"), (0, "rgba(180,180,180,0.5)")]:
             fig2.add_hline(y=y_val, line_dash="dash", line_color=color, line_width=1)
+
+        if trades:
+            entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
+            exit_z_vals  = [z_score_series.loc[d] if d in z_score_series.index else None for d in exit_dates]
+            fig2.add_trace(go.Scatter(
+                x=entry_dates, y=entry_z_vals, mode="markers", name="Entrée",
+                marker=dict(symbol="triangle-up", size=10, color=entry_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="Entrée %{x} · z=%{y:.2f}<extra></extra>"
+            ))
+            fig2.add_trace(go.Scatter(
+                x=exit_dates, y=exit_z_vals, mode="markers", name="Sortie",
+                marker=dict(symbol="triangle-down", size=10, color=exit_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="Sortie %{x} · z=%{y:.2f}<extra></extra>"
+            ))
+
         fig2.update_layout(
             title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-            height=220, margin=dict(t=36, b=16, l=40, r=16),
-            plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False
+            height=260, margin=dict(t=36, b=16, l=40, r=16),
+            plot_bgcolor="#fff", paper_bgcolor="#fff",
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11))
         )
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
