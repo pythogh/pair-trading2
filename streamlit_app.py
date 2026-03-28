@@ -485,31 +485,29 @@ else:
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
 
-        # Ajouter colonne Logo en HTML (img tag)
-        def make_logo_html(paire):
-            parts = paire.split(" / ")
-            imgs = ""
-            for p in parts:
-                url = logos.get(p, "")
-                if url:
-                    imgs += f"<img src='{url}' style='width:18px;height:18px;border-radius:50%;margin-right:3px;vertical-align:middle'>"
-            return imgs + f"<span style='font-size:12px;vertical-align:middle'>{paire}</span>"
-
+        # Ajouter les URLs des logos comme colonne image
         df_display = df_tab1_signal.reset_index(drop=True).copy()
-        df_display.insert(0, "Tokens", df_display["Paire"].apply(make_logo_html))
-        df_display = df_display.drop(columns=["Paire"])
+        df_display.insert(0, "Logo A", df_display["Paire"].apply(
+            lambda p: logos.get(p.split(" / ")[0], "")
+        ))
+        df_display.insert(1, "Logo B", df_display["Paire"].apply(
+            lambda p: logos.get(p.split(" / ")[1], "") if " / " in p else ""
+        ))
 
-        st.markdown(
+        st.dataframe(
             df_display.style
             .applymap(_color_verdict, subset=["Verdict"])
             .applymap(_color_corr,    subset=["Corrélation"])
             .applymap(_color_p,       subset=["p-value"])
             .applymap(_color_hl,      subset=["Half-Life (j)"])
             .applymap(_color_z,       subset=["Z-Score"])
-            .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"})
-            .hide(axis="index")
-            .to_html(escape=False),
-            unsafe_allow_html=True
+            .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Logo A": st.column_config.ImageColumn("", width="small"),
+                "Logo B": st.column_config.ImageColumn("", width="small"),
+            }
         )
 
 # ── Analyse de paire ─────────────────────────────────────────────────────────
