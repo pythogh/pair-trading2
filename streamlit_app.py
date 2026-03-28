@@ -319,31 +319,6 @@ if "active_tab" not in st.session_state:
     st.session_state.active_tab = 0
 if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
-if "logos" not in st.session_state:
-    st.session_state["logos"] = {}
-
-@st.cache_data(ttl=86400)
-def fetch_logos(cryptos_dict):
-    """Récupère les URLs des logos depuis CoinGecko pour tous les tokens."""
-    logos = {}
-    headers = {"x-cg-demo-api-key": API_KEY}
-    for name, slug in cryptos_dict.items():
-        try:
-            r = requests.get(
-                f"https://api.coingecko.com/api/v3/coins/{slug}",
-                params={"localization": "false", "market_data": "false",
-                        "community_data": "false", "developer_data": "false"},
-                headers=headers, timeout=10
-            )
-            if r.status_code == 200:
-                logos[name] = r.json().get("image", {}).get("small", "")
-        except Exception:
-            logos[name] = ""
-    return logos
-
-if not st.session_state["logos"]:
-    with st.spinner("Chargement des logos..."):
-        st.session_state["logos"] = fetch_logos(CRYPTOS)
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 # Force recalcul si les données contiennent encore l'ancien label "Idéale"
@@ -366,9 +341,9 @@ if not st.session_state["matrix_results"] or _stale:
         results_auto.append({
             "Paire": f"{a} / {b}",
             "Corrélation": m["Corrélation"],
-            "Beta (β)": m["Hedge Ratio (β)"],
-            "p-value": m["Co-intégration (p)"],
-            "Half-Life (j)": m["Half-Life (jours)"],
+            "Hedge Ratio β": m["Hedge Ratio (β)"],
+            "Co-intégration p": m["Co-intégration (p)"],
+            "Half-Life": m["Half-Life (jours)"],
             "Z-Score": m["Z-Score"],
             "Verdict": m["Verdict"],
             "Signal": m["Signal"],
@@ -451,7 +426,6 @@ else:
     if df_tab1_signal.empty:
         st.info("Aucun signal actif sur les paires calculées.")
     else:
-        logos = st.session_state.get("logos", {})
 
         def _color_verdict(val):
             if "✅" in str(val): return "background-color:#e8f7f1;color:#0F6E56"
@@ -485,29 +459,16 @@ else:
                 return "background-color:#fdf0f0;color:#A32D2D"
             except: return ""
 
-        # Ajouter les URLs des logos comme colonne image
-        df_display = df_tab1_signal.reset_index(drop=True).copy()
-        df_display.insert(0, "Logo A", df_display["Paire"].apply(
-            lambda p: logos.get(p.split(" / ")[0], "")
-        ))
-        df_display.insert(1, "Logo B", df_display["Paire"].apply(
-            lambda p: logos.get(p.split(" / ")[1], "") if " / " in p else ""
-        ))
-
         st.dataframe(
-            df_display.style
+            df_tab1_signal.reset_index(drop=True).style
             .applymap(_color_verdict, subset=["Verdict"])
             .applymap(_color_corr,    subset=["Corrélation"])
-            .applymap(_color_p,       subset=["p-value"])
-            .applymap(_color_hl,      subset=["Half-Life (j)"])
+            .applymap(_color_p,       subset=["Co-intégration p"])
+            .applymap(_color_hl,      subset=["Half-Life"])
             .applymap(_color_z,       subset=["Z-Score"])
-            .format({"Corrélation": "{:.3f}", "Beta (β)": "{:.4f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"}),
+            .format({"Corrélation": "{:.3f}", "Hedge Ratio β": "{:.4f}", "Co-intégration p": "{:.4f}", "Z-Score": "{:.2f}"}),
             use_container_width=True,
             hide_index=True,
-            column_config={
-                "Logo A": st.column_config.ImageColumn("", width="small"),
-                "Logo B": st.column_config.ImageColumn("", width="small"),
-            }
         )
 
 # ── Analyse de paire ─────────────────────────────────────────────────────────
@@ -522,14 +483,8 @@ default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b
 ctrl1, ctrl2, ctrl3, ctrl4, _ = st.columns([1.2, 1.2, 0.8, 0.6, 1.2])
 with ctrl1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
-    logo_a = st.session_state["logos"].get(name_a, "")
-    if logo_a:
-        st.markdown(f"<img src='{logo_a}' style='width:20px;height:20px;border-radius:50%;margin-right:6px;vertical-align:middle'><span style='font-size:11px;color:#888'>{name_a}</span>", unsafe_allow_html=True)
 with ctrl2:
     name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
-    logo_b = st.session_state["logos"].get(name_b, "")
-    if logo_b:
-        st.markdown(f"<img src='{logo_b}' style='width:20px;height:20px;border-radius:50%;margin-right:6px;vertical-align:middle'><span style='font-size:11px;color:#888'>{name_b}</span>", unsafe_allow_html=True)
 with ctrl3:
     capital = st.number_input("Capital ($)", value=1000, step=100)
 with ctrl4:
@@ -560,15 +515,7 @@ elif analyse:
             alloc_b = capital - alloc_a
 
             # ── BACKTEST ──────────────────────────────────────────────────
-            logos = st.session_state.get("logos", {})
-            logo_a_url = logos.get(name_a, "")
-            logo_b_url = logos.get(name_b, "")
-            logo_a_html = f"<img src='{logo_a_url}' style='width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:4px'>" if logo_a_url else ""
-            logo_b_html = f"<img src='{logo_b_url}' style='width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:4px'>" if logo_b_url else ""
-            st.markdown(
-                f"#### {logo_a_html}{name_a} <span style='color:#ccc;font-weight:300'>vs</span> {logo_b_html}{name_b}",
-                unsafe_allow_html=True
-            )
+            st.markdown("#### Backtest")
 
             # Paramètres affichés et modifiables
             bp1, bp2, bp3 = st.columns(3)
