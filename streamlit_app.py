@@ -586,6 +586,7 @@ with tabs[2]:
             results.append({
                 "Paire": f"{a} / {b}",
                 "Corrélation": m["Corrélation"],
+                "Beta (β)": m["Hedge Ratio (β)"],
                 "p-value": m["Co-intégration (p)"],
                 "Half-Life (j)": m["Half-Life (jours)"],
                 "Z-Score": m["Z-Score"],
@@ -626,31 +627,62 @@ with tabs[2]:
             fig_corr.update_traces(textfont_size=11)
             st.plotly_chart(fig_corr, use_container_width=True)
 
-            # Tableau — on retire les paires sans signal
+            # Tableau — paires avec signal actif
             st.markdown("#### Paires avec signal actif")
             df_signal = df_res[df_res["Signal"] != "Pas de signal"].copy()
 
             if df_signal.empty:
                 st.info("Aucun signal actif en ce moment (z-score entre -2 et +2 sur toutes les paires).")
             else:
-                for _, row in df_signal.iterrows():
-                    col_info, col_btn = st.columns([4, 1])
-                    with col_info:
-                        verdict_icon = "✅" if "✅" in row["Verdict"] else ("⚠️" if "⚠️" in row["Verdict"] else "❌")
-                        st.markdown(
-                            f"**{row['Paire']}** &nbsp;·&nbsp; "
-                            f"{row['Signal']} &nbsp;·&nbsp; "
-                            f"corr **{row['Corrélation']:.3f}** &nbsp;·&nbsp; "
-                            f"p **{row['p-value']:.4f}** &nbsp;·&nbsp; "
-                            f"hl **{row['Half-Life (j)']} j** &nbsp;·&nbsp; "
-                            f"z **{row['Z-Score']:.2f}** &nbsp; {verdict_icon}"
-                        )
-                    with col_btn:
-                        pair_a, pair_b = row["Paire"].split(" / ")
-                        if st.button("Analyser →", key=f"btn_{row['Paire']}"):
-                            st.session_state.prefill_a = pair_a
-                            st.session_state.prefill_b = pair_b
-                            st.rerun()
+                # En-tête
+                h1, h2, h3, h4, h5, h6, h7, h8 = st.columns([2.2, 1, 1, 1, 1, 1, 1.4, 0.8])
+                for h, label in zip(
+                    [h1, h2, h3, h4, h5, h6, h7, h8],
+                    ["Paire", "Corrélation", "Beta (β)", "p-value", "Half-Life", "Z-Score", "Signal", ""]
+                ):
+                    h.markdown(f"<p style='font-size:11px;color:#999;margin:0'>{label}</p>", unsafe_allow_html=True)
+                st.divider()
+
+                for idx, row in df_signal.iterrows():
+                    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([2.2, 1, 1, 1, 1, 1, 1.4, 0.8])
+                    verdict_icon = "✅" if "✅" in row["Verdict"] else ("⚠️" if "⚠️" in row["Verdict"] else "❌")
+                    z_color = "#E24B4A" if abs(float(row["Z-Score"])) > 2 else "inherit"
+                    p_color = "#1D9E75" if float(row["p-value"]) < 0.05 else "#E24B4A"
+
+                    c1.markdown(f"**{row['Paire']}** {verdict_icon}")
+                    c2.markdown(f"<span style='font-size:12px'>{row['Corrélation']:.3f}</span>", unsafe_allow_html=True)
+                    c3.markdown(f"<span style='font-size:12px'>{row['Beta (β)']:.4f}</span>", unsafe_allow_html=True)
+                    c4.markdown(f"<span style='font-size:12px;color:{p_color}'>{row['p-value']:.4f}</span>", unsafe_allow_html=True)
+                    c5.markdown(f"<span style='font-size:12px'>{row['Half-Life (j)']} j</span>", unsafe_allow_html=True)
+                    c6.markdown(f"<span style='font-size:12px;font-weight:500;color:{z_color}'>{row['Z-Score']:.2f}</span>", unsafe_allow_html=True)
+                    c7.markdown(f"<span style='font-size:11px'>{row['Signal']}</span>", unsafe_allow_html=True)
+
+                    pair_a, pair_b = row["Paire"].split(" / ")
+                    with c8:
+                        with st.expander("→ Détail"):
+                            sa, ea = fetch_prices(CRYPTOS[pair_a])
+                            sb, eb = fetch_prices(CRYPTOS[pair_b])
+                            if ea or eb:
+                                st.error(ea or eb)
+                            else:
+                                md = compute_metrics(sa, sb, pair_a, pair_b)
+                                if md:
+                                    z_s = md["z_score"].dropna()
+                                    fig_z = go.Figure()
+                                    fig_z.add_trace(go.Scatter(
+                                        x=z_s.index, y=z_s,
+                                        line=dict(color="#378ADD", width=1.2),
+                                        fill="tozeroy", fillcolor="rgba(55,138,221,0.05)"
+                                    ))
+                                    for yv, col in [(2, "rgba(220,50,50,0.4)"), (-2, "rgba(220,50,50,0.4)"), (0, "rgba(180,180,180,0.4)")]:
+                                        fig_z.add_hline(y=yv, line_dash="dash", line_color=col, line_width=0.8)
+                                    fig_z.update_layout(
+                                        height=180, margin=dict(t=10, b=10, l=30, r=10),
+                                        plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
+                                    )
+                                    fig_z.update_xaxes(showgrid=False, tickfont=dict(size=9))
+                                    fig_z.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=9))
+                                    st.plotly_chart(fig_z, use_container_width=True)
 
             # Tableau complet (toutes les paires)
             st.markdown("#### Toutes les paires")
@@ -673,7 +705,12 @@ with tabs[2]:
                 .applymap(color_verdict, subset=["Verdict"])
                 .applymap(color_pvalue, subset=["p-value"])
                 .applymap(color_zscore, subset=["Z-Score"])
-                .format({"Corrélation": "{:.3f}", "p-value": "{:.4f}", "Z-Score": "{:.2f}"})
+                .format({
+                    "Corrélation": "{:.3f}",
+                    "Beta (β)": "{:.4f}",
+                    "p-value": "{:.4f}",
+                    "Z-Score": "{:.2f}",
+                })
             )
             st.dataframe(styled_all, use_container_width=True, height=480)
 
