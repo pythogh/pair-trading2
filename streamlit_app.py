@@ -29,16 +29,22 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
 .stApp { background-color: #ffffff !important; }
-/* Hauteur uniforme sur les blocs métriques */
-[data-testid="stColumns"]:first-of-type [data-testid="stVerticalBlockBorderWrapper"] {
-    height: 100% !important;
-    min-height: 320px !important;
+/* Supprimer le padding vertical excessif autour de st.latex */
+[data-testid="stVerticalBlockBorderWrapper"] .katex-display {
+    margin: 6px 0 !important;
+    padding: 0 !important;
 }
-[data-testid="stColumns"]:first-of-type [data-testid="stVerticalBlockBorderWrapper"] > div {
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p {
+    margin-bottom: 0 !important;
+}
+/* Hauteur uniforme : étirer tous les containers bordés dans la même rangée de colonnes */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    height: 100% !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"] > div:first-child {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -389,15 +395,13 @@ for col, (name, info) in zip(cols, METRICS_COMPACT.items()):
     with col:
         with st.container(border=True):
             st.markdown(
-                f"<div style='min-height:280px;display:flex;flex-direction:column;padding-bottom:8px'>"
                 f"<p style='font-size:12px;font-weight:500;margin:0 0 2px'>{info['emoji']} {name}</p>"
-                f"<p style='font-size:10px;color:#999;margin:0 0 4px'>Seuil : {info['seuil']}</p>"
-                f"</div>",
+                f"<p style='font-size:10px;color:#999;margin:0 0 4px'>Seuil : {info['seuil']}</p>",
                 unsafe_allow_html=True
             )
             st.latex(info["latex"])
             st.markdown(
-                f"<p style='font-size:11px;color:#888;line-height:1.5;margin:4px 0 16px'>{info['note']}</p>",
+                f"<p style='font-size:11px;color:#888;line-height:1.5;margin:4px 0 8px'>{info['note']}</p>",
                 unsafe_allow_html=True
             )
 
