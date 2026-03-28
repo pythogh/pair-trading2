@@ -516,10 +516,35 @@ else:
 
         # Préparer les dates et valeurs des marqueurs si des trades existent
         if trades:
-            entry_dates = pd.to_datetime(df_trades["entrée"])
-            exit_dates  = pd.to_datetime(df_trades["sortie"])
+            entry_dates  = pd.to_datetime(df_trades["entrée"])
+            exit_dates   = pd.to_datetime(df_trades["sortie"])
             entry_colors = ["#1D9E75" if t.startswith("LONG") else "#E24B4A" for t in df_trades["type"]]
             exit_colors  = ["#E24B4A" if t.startswith("LONG") else "#1D9E75" for t in df_trades["type"]]
+            trade_nums   = list(range(1, n_trades + 1))
+
+            # Prix réels aux dates d'entrée et sortie
+            entry_pa = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in entry_dates]
+            entry_pb = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in entry_dates]
+            exit_pa  = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in exit_dates]
+            exit_pb  = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in exit_dates]
+
+            entry_hover = [
+                f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
+                f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {ze:.2f}"
+                for n, t, d, pa, pb, ze in zip(
+                    trade_nums, df_trades["type"], entry_dates,
+                    entry_pa, entry_pb, df_trades["z entrée"]
+                )
+            ]
+            exit_hover = [
+                f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
+                f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {zs:.2f}<br>"
+                f"P&L : <b>{pnl:+.2f}$</b>"
+                for n, r, d, pa, pb, zs, pnl in zip(
+                    trade_nums, df_trades["raison"], exit_dates,
+                    exit_pa, exit_pb, df_trades["z sortie"], df_trades["P&L ($)"]
+                )
+            ]
 
         # Graphe 1 — prix normalisés
         fig = go.Figure()
@@ -527,23 +552,28 @@ else:
         fig.add_trace(go.Scatter(x=df.index, y=df["B"]/df["B"].iloc[0], name=name_b, line=dict(color="#7F77DD", width=1.5)))
 
         if trades:
-            # Marqueurs d'entrée sur prix normalisé de A
             entry_y_a = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in entry_dates]
             exit_y_a  = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in exit_dates]
             fig.add_trace(go.Scatter(
-                x=entry_dates, y=entry_y_a, mode="markers", name="Entrée",
-                marker=dict(symbol="triangle-up", size=10, color=entry_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="Entrée %{x}<extra></extra>"
+                x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
+                text=trade_nums, textposition="top center",
+                textfont=dict(size=9, color="#555"),
+                marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=entry_hover,
             ))
             fig.add_trace(go.Scatter(
-                x=exit_dates, y=exit_y_a, mode="markers", name="Sortie",
-                marker=dict(symbol="triangle-down", size=10, color=exit_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="Sortie %{x}<extra></extra>"
+                x=exit_dates, y=exit_y_a, mode="markers+text", name="Sortie",
+                text=trade_nums, textposition="bottom center",
+                textfont=dict(size=9, color="#555"),
+                marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=exit_hover,
             ))
 
         fig.update_layout(
             title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-            height=260, margin=dict(t=36, b=16, l=40, r=16),
+            height=280, margin=dict(t=36, b=16, l=40, r=16),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11))
         )
@@ -561,19 +591,25 @@ else:
             entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
             exit_z_vals  = [z_score_series.loc[d] if d in z_score_series.index else None for d in exit_dates]
             fig2.add_trace(go.Scatter(
-                x=entry_dates, y=entry_z_vals, mode="markers", name="Entrée",
-                marker=dict(symbol="triangle-up", size=10, color=entry_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="Entrée %{x} · z=%{y:.2f}<extra></extra>"
+                x=entry_dates, y=entry_z_vals, mode="markers+text", name="Entrée",
+                text=trade_nums, textposition="top center",
+                textfont=dict(size=9, color="#555"),
+                marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=entry_hover,
             ))
             fig2.add_trace(go.Scatter(
-                x=exit_dates, y=exit_z_vals, mode="markers", name="Sortie",
-                marker=dict(symbol="triangle-down", size=10, color=exit_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="Sortie %{x} · z=%{y:.2f}<extra></extra>"
+                x=exit_dates, y=exit_z_vals, mode="markers+text", name="Sortie",
+                text=trade_nums, textposition="bottom center",
+                textfont=dict(size=9, color="#555"),
+                marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=exit_hover,
             ))
 
         fig2.update_layout(
             title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-            height=260, margin=dict(t=36, b=16, l=40, r=16),
+            height=280, margin=dict(t=36, b=16, l=40, r=16),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11))
         )
