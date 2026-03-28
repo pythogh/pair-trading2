@@ -328,7 +328,7 @@ keys = list(CRYPTOS.keys())
 default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
 default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-ctrl1, ctrl2, ctrl3, ctrl4, _ = st.columns([1.2, 1.2, 0.8, 0.6, 1.2])
+ctrl1, ctrl2, ctrl3, ctrl4, _ = st.columns([1.0, 1.0, 0.6, 0.5, 1.9])
 with ctrl1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
 with ctrl2:
@@ -380,7 +380,7 @@ else:
 
         st.markdown("#### Backtest")
 
-        bp1, bp2, bp3 = st.columns(3)
+        bp1, bp2, bp3, _ = st.columns([1.0, 1.0, 0.6, 1.9])
         with bp1:
             entry_z = st.number_input("Seuil d'entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
         with bp2:
@@ -477,6 +477,7 @@ else:
                 ("Drawdown max", f"<span style='color:{dd_color}'>▼ {max_dd:.0f}$</span>"),
                 ("Sharpe",       f"<span style='color:{sh_color}'>{sh_icon} {sharpe:.2f}</span>"),
             ]
+            st.markdown("<div style='margin:16px 0 6px'></div>", unsafe_allow_html=True)
             bt_cols = st.columns(5)
             for col, (label, value) in zip(bt_cols, bt_cards):
                 with col:
@@ -487,6 +488,7 @@ else:
                         </div>""",
                         unsafe_allow_html=True
                     )
+            st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
 
             fig_pnl = go.Figure()
             fig_pnl.add_trace(go.Scatter(
