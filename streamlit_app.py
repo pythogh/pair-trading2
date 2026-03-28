@@ -44,45 +44,145 @@ CRYPTOS = {
     "Pump.fun":    "pump-fun",
     "LayerZero":   "layerzero",
     "Hyperliquid": "hyperliquid",
-    "Syrup":       "syrup",
-    "Fluid":       "fluid-protocol",
+    "Syrup":       "maple-finance",
+    "Fluid":       "fluid",
 }
 
 METRICS_INFO = {
     "Corrélation": {
         "emoji": "📊",
-        "definition": "Mesure si deux actifs bougent dans le même sens. "
-                      "Proche de **1.0** = ils bougent ensemble (idéal pour le pair trading). "
-                      "Proche de **0** = ils sont indépendants. Négatif = ils bougent en sens inverse.",
+        "definition": """Mesure si deux actifs bougent dans le même sens, en comparant leurs **rendements journaliers** (et non leurs prix bruts).
+
+**Pourquoi les rendements et pas les prix ?**
+Les prix montent structurellement avec le temps — comparer deux prix qui grimpent tous les deux donnerait une corrélation artificielle. Les rendements (variation % jour J vs jour J-1) éliminent cette tendance et mesurent uniquement le *comportement* commun.
+
+**Formule :**
+```
+rendement_A(t) = (Prix_A(t) - Prix_A(t-1)) / Prix_A(t-1)
+
+Corrélation = cov(rendements_A, rendements_B)
+              ─────────────────────────────────
+              std(rendements_A) × std(rendements_B)
+```
+
+**Lecture du résultat :**
+- `1.0` → mouvements parfaitement identiques
+- `0.0` → aucune relation
+- `-1.0` → mouvements parfaitement opposés
+- En pratique, une paire utile se situe entre **0.7 et 0.95**""",
         "seuil": "✅ Bon signal si > 0.7",
     },
     "Hedge Ratio (β)": {
         "emoji": "⚖️",
-        "definition": "Le réglage de l'équilibre entre les deux actifs. "
-                      "Indique combien d'unités de l'actif B il faut pour couvrir 1 unité de l'actif A. "
-                      "Permet de construire une position **market-neutral**.",
+        "definition": """Répond à la question : *dans quelle proportion dois-je acheter B pour que ma position soit neutre par rapport au marché ?*
+
+**Méthode : régression OLS (moindres carrés ordinaires)**
+On cherche la droite qui minimise l'écart entre le prix de A et une combinaison linéaire de B.
+
+**Formule :**
+```
+Prix_A = α + β × Prix_B + ε
+
+β (hedge ratio) = cov(Prix_A, Prix_B) / var(Prix_B)
+α (intercept)   = moyenne(Prix_A) - β × moyenne(Prix_B)
+```
+
+**Ce que ça donne concrètement :**
+Si β = 0.003 entre Aave et Pendle, et que Pendle vaut 5$ et Aave vaut 90$ :
+```
+Capital A / Capital B = β × Prix_B / Prix_A
+                      = 0.003 × 5 / 90 ≈ 0.00017
+```
+→ Pour 1 000$ de position, tu alloues ~999.83$ sur A et ~0.17$ sur B.
+
+**Remarque :** un β très petit indique des prix très différents — c'est normal pour des cryptos de valeurs différentes.""",
         "seuil": "ℹ️ Pas de seuil fixe — dépend de la paire",
     },
     "Co-intégration (p)": {
         "emoji": "🔬",
-        "definition": "La preuve mathématique qu'un **élastique invisible** relie les deux prix. "
-                      "Si p < 0.05, l'écart entre les deux actifs revient toujours vers sa moyenne. "
-                      "C'est le fondement théorique du pair trading.",
+        "definition": """La preuve mathématique qu'un **élastique invisible** relie les deux prix dans le temps.
+
+**Deux actifs peuvent être corrélés sans être co-intégrés.** La corrélation mesure les mouvements simultanés. La co-intégration mesure si l'*écart* entre eux est stable sur le long terme — s'il revient toujours vers une moyenne.
+
+**Calcul en 2 étapes :**
+
+*Étape 1 — construire le spread :*
+```
+spread(t) = Prix_A(t) - (β × Prix_B(t) + α)
+```
+C'est l'écart entre le prix réel de A et ce que le modèle prédit.
+
+*Étape 2 — test ADF (Augmented Dickey-Fuller) sur le spread :*
+```
+H0 (hypothèse nulle) : le spread est une marche aléatoire (pas de retour à la moyenne)
+H1 (alternative)     : le spread est stationnaire (revient à sa moyenne)
+
+p-value = probabilité d'observer ces données si H0 est vraie
+```
+
+**Lecture :**
+- `p < 0.05` → on rejette H0 avec 95% de confiance → l'élastique existe ✅
+- `p > 0.05` → on ne peut pas rejeter H0 → la relation est aléatoire ❌""",
         "seuil": "✅ Bon signal si p < 0.05",
     },
     "Half-Life (jours)": {
         "emoji": "⏳",
-        "definition": "Le chrono du trade. Temps moyen estimé pour que l'écart (spread) "
-                      "se réduise de moitié et revienne vers l'équilibre. "
-                      "Trop court = bruit. Trop long = capital immobilisé trop longtemps.",
+        "definition": """Le **chrono du trade** : combien de jours faut-il en moyenne pour que l'écart se réduise de moitié ?
+
+**Modèle de retour à la moyenne (Ornstein-Uhlenbeck) :**
+On suppose que le spread suit une dynamique où il est attiré vers sa moyenne avec une force proportionnelle à son éloignement.
+
+**Formule :**
+```
+Δspread(t) = λ × spread(t-1) + ε
+
+où λ est estimé par régression OLS :
+  Δspread(t)   = spread(t) - spread(t-1)
+  spread(t-1)  = valeur du spread la veille
+
+Half-Life = ln(2) / λ
+```
+
+**Exemple :**
+Si λ = 0.08 → Half-Life = ln(2) / 0.08 ≈ **8.7 jours**
+→ Un trade ouvert aujourd'hui devrait se fermer en ~9 jours en moyenne.
+
+**Pourquoi c'est important :**
+- `< 3 jours` → trop court, probablement du bruit de marché
+- `5–15 jours` → créneau idéal pour trader
+- `> 30 jours` → capital immobilisé trop longtemps, risque de retournement""",
         "seuil": "✅ Idéal entre 5 et 15 jours",
     },
     "Z-Score": {
         "emoji": "🌡️",
-        "definition": "Le thermomètre de l'opportunité. Mesure à quel point l'écart actuel "
-                      "est éloigné de sa moyenne historique (en nombre d'écarts-types). "
-                      "**+2** = actif A trop cher vs B → signal SHORT A / LONG B. "
-                      "**-2** = actif A trop bon marché vs B → signal LONG A / SHORT B.",
+        "definition": """Le **thermomètre de l'opportunité** : indique à quelle distance de sa moyenne historique se trouve le spread *en ce moment*, exprimé en nombre d'écarts-types.
+
+**Formule (fenêtre glissante de 30 jours) :**
+```
+Z-Score(t) = spread(t) - moyenne_30j(spread)
+             ──────────────────────────────────
+             écart_type_30j(spread)
+```
+
+**Pourquoi une fenêtre de 30 jours ?**
+On utilise une moyenne *mobile* plutôt qu'une moyenne fixe sur toute la période, car la relation entre deux cryptos évolue lentement. 30 jours capture le comportement récent sans sur-réagir au bruit quotidien.
+
+**Signaux de trading :**
+```
+Z > +2  →  spread anormalement haut
+           A est trop cher par rapport à B
+           Signal : SHORT A + LONG B
+
+Z < -2  →  spread anormalement bas
+           A est trop bon marché par rapport à B
+           Signal : LONG A + SHORT B
+
+-2 < Z < +2  →  zone neutre, pas d'opportunité
+
+Z = 0   →  spread exactement à sa moyenne, équilibre parfait
+```
+
+**Intuition :** si le z-score suit une distribution normale, un z > 2 se produit seulement ~2.5% du temps. C'est un événement statistiquement rare — c'est exactement là qu'on veut trader.""",
         "seuil": "🚨 Signal fort si |z| > 2",
     },
 }
