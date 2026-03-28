@@ -394,11 +394,11 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1px solid #e0ddd6;border-radius:8px;padding:14px 14px 14px;height:220px;display:flex;flex-direction:column;">
+            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 14px 14px;height:150px;display:flex;flex-direction:column;">
             <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
-            <p style="font-size:10px;color:#aaa;margin:0 0 10px">Seuil : {info['seuil']}</p>
-            <p style="font-size:14px;font-family:Georgia,serif;text-align:center;margin:0 0 10px;color:#333">{info['formule']}</p>
-            <p style="font-size:11px;color:#888;line-height:1.5;margin:0">{info['note']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 8px">Seuil : {info['seuil']}</p>
+            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 8px;color:#333">{info['formule']}</p>
+            <p style="font-size:11px;color:#888;line-height:1.4;margin:0">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -435,7 +435,7 @@ else:
             try: return "font-weight:500;color:#E24B4A" if abs(float(val)) > 2 else ""
             except: return ""
         st.dataframe(
-            df_tab1_signal.style
+            df_tab1_signal.reset_index(drop=True).style
             .applymap(_color_verdict, subset=["Verdict"])
             .applymap(_color_p, subset=["p-value"])
             .applymap(_color_z, subset=["Z-Score"])
@@ -484,29 +484,7 @@ with right:
                 alloc_a = capital / (1 + ratio)
                 alloc_b = capital - alloc_a
 
-                # Verdict
-                if m["verdict_color"] == "green":
-                    st.success(f"**{m['Verdict']}** — co-intégration solide, half-life rapide.")
-                elif m["verdict_color"] == "orange":
-                    st.warning(f"**{m['Verdict']}** — co-intégration ok mais paire lente.")
-                else:
-                    st.error(f"**{m['Verdict']}** — co-intégration insuffisante.")
-
-                if abs(z) > 2:
-                    st.error(f"🚨 **Signal : {m['Signal']}**\n\n→ {name_a} : **{alloc_a:.0f}$**  ·  {name_b} : **{alloc_b:.0f}$**")
-                else:
-                    st.info(f"😴 **{m['Signal']}** — z-score neutre ({z})")
-
-                st.divider()
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Corrélation", m["Corrélation"])
-                c2.metric("Hedge Ratio β", m["Hedge Ratio (β)"])
-                c3.metric("Co-intégration p", m["Co-intégration (p)"])
-                c4.metric("Half-Life", f"{m['Half-Life (jours)']} j")
-                c5.metric("Z-Score", m["Z-Score"])
-
                 # ── BACKTEST ──────────────────────────────────────────────────
-                st.divider()
                 st.markdown("#### Backtest")
 
                 # Paramètres affichés et modifiables
