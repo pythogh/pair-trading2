@@ -488,7 +488,7 @@ else:
                     st.markdown(
                         f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:12px 14px 10px;">
                         <p style="font-size:10px;color:#aaa;margin:0 0 6px">{label}</p>
-                        <p style="font-size:14px;font-weight:500;margin:0">{value}</p>
+                        <p style="font-size:20px;font-weight:500;margin:0">{value}</p>
                         </div>""",
                         unsafe_allow_html=True
                     )
@@ -601,7 +601,9 @@ else:
             title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
             height=280, margin=dict(t=36, b=16, l=40, r=16),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11))
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11)),
+            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                         line=dict(color="#ccc", width=1, dash="dash"))]
         )
         fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
@@ -637,7 +639,9 @@ else:
             title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
             height=280, margin=dict(t=36, b=16, l=40, r=16),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11))
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11)),
+            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                         line=dict(color="#ccc", width=1, dash="dash"))]
         )
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
