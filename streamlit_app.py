@@ -177,60 +177,66 @@ if "token_logos" not in st.session_state:
     st.session_state["token_logos"] = {}
 
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
-# Mapping slug fichier CSV → slug CoinMarketCap (si différent)
-CMC_SLUG_MAP = {
-    "curve":       "curve-dao-token",
-    "fetch-ai":    "fetch-ai",         # à vérifier
-    "lido":        "lido-dao",
-    "optimism":    "optimism-ethereum",
-    "syrupfi":     "syrup",
-    "world-coin":  "worldcoin-org",
-}
-
 @st.cache_data(ttl=86400, show_spinner=False)
-def fetch_all_logos(slugs: tuple, api_key: str) -> dict:
-    """Récupère tous les logos en un seul appel batch CoinMarketCap."""
+def fetch_all_logos(token_names: tuple, api_key: str) -> dict:
+    """2 appels CMC : /map pour résoudre les noms → IDs, puis /info pour les logos."""
     import requests
-    logos = {s: "" for s in slugs}
+    logos = {n: "" for n in token_names}
     if not api_key:
-        logos["__error__"] = "Clé API_CMC non trouvée dans les secrets Streamlit."
+        logos["__error__"] = "Clé API_CMC manquante dans les secrets Streamlit."
         return logos
-
-    # Traduire les slugs via le mapping
-    cmc_to_original = {}
-    cmc_slugs = []
-    for s in slugs:
-        cmc = CMC_SLUG_MAP.get(s, s)
-        cmc_slugs.append(cmc)
-        cmc_to_original[cmc] = s
-
     try:
-        r = requests.get(
+        # Étape 1 — récupérer toute la map CMC (nom → id)
+        r_map = requests.get(
+            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/map",
+            params={"listing_status": "active", "limit": 10000},
+            headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
+            timeout=20,
+        )
+        if r_map.status_code != 200:
+            logos["__error__"] = f"/map HTTP {r_map.status_code}: {r_map.text[:200]}"
+            return logos
+
+        name_to_id = {c["name"].lower(): c["id"] for c in r_map.json().get("data", [])}
+
+        # Résoudre chaque token
+        id_to_token = {}
+        for token in token_names:
+            cmc_id = name_to_id.get(token.lower())
+            if cmc_id:
+                id_to_token[str(cmc_id)] = token
+
+        if not id_to_token:
+            logos["__error__"] = "Aucun token résolu via /map"
+            return logos
+
+        # Étape 2 — logos par IDs
+        r_info = requests.get(
             "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info",
-            params={"slug": ",".join(cmc_slugs), "aux": "logo"},
+            params={"id": ",".join(id_to_token.keys()), "aux": "logo"},
             headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
             timeout=15,
         )
-        if r.status_code == 200:
-            for coin in r.json().get("data", {}).values():
-                cmc_slug = coin.get("slug", "")
-                original = cmc_to_original.get(cmc_slug, cmc_slug)
-                logos[original] = coin.get("logo", "")
-        else:
-            logos["__error__"] = f"HTTP {r.status_code}: {r.text[:300]}"
+        if r_info.status_code != 200:
+            logos["__error__"] = f"/info HTTP {r_info.status_code}: {r_info.text[:200]}"
+            return logos
+
+        for cmc_id, coin in r_info.json().get("data", {}).items():
+            token = id_to_token.get(str(cmc_id), "")
+            if token:
+                logos[token] = coin.get("logo", "")
+
     except Exception as e:
         logos["__error__"] = str(e)
     return logos
 
 if not st.session_state["token_logos"]:
-    slugs = tuple(CRYPTOS.values())
-    _cmc_key = st.secrets.get("API_CMC", "") if hasattr(st.secrets, "get") else st.secrets.get("API_CMC", "")
+    _cmc_key = st.secrets["API_CMC"] if "API_CMC" in st.secrets else ""
     with st.spinner("Chargement des logos…"):
-        st.session_state["token_logos"] = fetch_all_logos(slugs, _cmc_key)
+        st.session_state["token_logos"] = fetch_all_logos(tuple(CRYPTOS.keys()), _cmc_key)
 
 def get_logo(name: str) -> str:
-    slug = CRYPTOS.get(name, "")
-    return st.session_state["token_logos"].get(slug, "")
+    return st.session_state["token_logos"].get(name, "")
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 _stale = any(
