@@ -178,26 +178,31 @@ if "token_logos" not in st.session_state:
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_all_logos(slugs: tuple) -> dict:
-    """Récupère les URLs des logos pour une liste de slugs CoinGecko."""
-    import requests
+    """Récupère les URLs des logos via CoinGecko (sans clé API, image 'small')."""
+    import requests, time
     logos = {}
     for slug in slugs:
         try:
             r = requests.get(
                 f"https://api.coingecko.com/api/v3/coins/{slug}",
                 params={"localization": "false", "market_data": "false",
-                        "community_data": "false", "developer_data": "false"},
-                timeout=6
+                        "community_data": "false", "developer_data": "false",
+                        "tickers": "false"},
+                timeout=8
             )
             if r.status_code == 200:
-                logos[slug] = r.json().get("image", {}).get("thumb", "")
+                logos[slug] = r.json().get("image", {}).get("small", "")
+            elif r.status_code == 429:
+                time.sleep(2)  # rate limit — on attend
         except Exception:
-            logos[slug] = ""
+            pass
+        logos.setdefault(slug, "")
     return logos
 
 if not st.session_state["token_logos"]:
     slugs = tuple(CRYPTOS.values())
-    st.session_state["token_logos"] = fetch_all_logos(slugs)
+    with st.spinner("Chargement des logos…"):
+        st.session_state["token_logos"] = fetch_all_logos(slugs)
 
 def get_logo(name: str) -> str:
     slug = CRYPTOS.get(name, "")
@@ -350,10 +355,10 @@ else:
 
         # Ajouter les colonnes logo
         df_display = df_tab1_signal.reset_index(drop=True).copy()
-        df_display.insert(0, "  ", df_display["Paire"].apply(
+        df_display.insert(0, "Logo A", df_display["Paire"].apply(
             lambda p: get_logo(p.split(" / ")[0]) if " / " in p else ""
         ))
-        df_display.insert(2, "   ", df_display["Paire"].apply(
+        df_display.insert(2, "Logo B", df_display["Paire"].apply(
             lambda p: get_logo(p.split(" / ")[1]) if " / " in p else ""
         ))
 
@@ -374,8 +379,8 @@ else:
             use_container_width=True,
             hide_index=True,
             column_config={
-                "  ":  st.column_config.ImageColumn("", width="small"),
-                "   ": st.column_config.ImageColumn("", width="small"),
+                "Logo A": st.column_config.ImageColumn("", width="small"),
+                "Logo B": st.column_config.ImageColumn("", width="small"),
             }
         )
 
