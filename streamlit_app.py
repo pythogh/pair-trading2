@@ -24,7 +24,7 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 .stButton > button:hover { background: #333 !important; }
 [data-testid="metric-container"] { background: #f7f6f3 !important; border-radius: 8px !important; padding: 10px 14px !important; border: none !important; }
 [data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
-[data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
+[data-testid="stMetricValue"] { font-size: 16px !important; font-weight: 500 !important; }
 [data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
