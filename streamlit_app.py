@@ -29,6 +29,8 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !important; margin-right: 4px !important; }
 .stApp { background-color: #ffffff !important; }
+/* Logos ronds dans les tableaux */
+[data-testid="stDataFrame"] img { border-radius: 50% !important; }
 /* Bordure pointillés + espacement uniforme sur les graphes Plotly */
 [data-testid="stPlotlyChart"],
 [data-testid="stPlotlyChart"] > div,
