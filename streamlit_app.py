@@ -445,6 +445,14 @@ with tab_bt:
     with c7:
         max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
 
+    # Ligne 3 : filtre période
+    import datetime as dt
+    r3c1, r3c2, _ = st.columns([0.8, 0.8, 3.4])
+    with r3c1:
+        date_start = st.date_input("Début", value=dt.date.today() - dt.timedelta(days=365), key="bt_date_start")
+    with r3c2:
+        date_end = st.date_input("Fin", value=dt.date.today(), key="bt_date_end")
+
     capital = 1000
 
     if name_a == name_b:
@@ -487,6 +495,13 @@ with tab_bt:
 
             z_score_series = m["z_score"].dropna()
             df_prices = m["df"]
+
+            # Filtrer sur la période sélectionnée
+            ts_start = pd.Timestamp(date_start)
+            ts_end   = pd.Timestamp(date_end)
+            z_score_series = z_score_series[(z_score_series.index >= ts_start) & (z_score_series.index <= ts_end)]
+            df_prices = df_prices[(df_prices.index >= ts_start) & (df_prices.index <= ts_end)]
+
             trades = []
             position = None
 
@@ -919,7 +934,8 @@ with tab_wr:
                 hover_vals.append(row_h)
 
             n = len(filtered_labels)
-            cell_size = max(40, min(60, 600 // n))
+            cell_size = max(40, min(55, 500 // max(n, 1)))
+            matrix_width = min(600, n * cell_size + 120)
 
             fig_wr = go.Figure(go.Heatmap(
                 z=z_vals, x=list(range(n)), y=list(range(n)),
@@ -933,28 +949,31 @@ with tab_wr:
                 zmin=0, zmax=1, showscale=False,
             ))
 
-            # Logos sur axe Y (gauche) et axe X (haut) via images Plotly
+            # Logos 14px dans des cercles sur les axes
             images = []
-            logo_size = min(28, cell_size - 10)
             for i, lbl in enumerate(filtered_labels):
                 url = get_logo(lbl)
-                if url:
-                    # Axe Y
-                    images.append(dict(
-                        source=url, xref="paper", yref="y",
-                        x=-0.01, y=i, xanchor="right", yanchor="middle",
-                        sizex=0.06, sizey=0.8,
-                    ))
-                    # Axe X (haut)
-                    images.append(dict(
-                        source=url, xref="x", yref="paper",
-                        x=i, y=1.01, xanchor="center", yanchor="bottom",
-                        sizex=0.8, sizey=0.06,
-                    ))
+                if not url:
+                    continue
+                # Axe Y gauche
+                images.append(dict(
+                    source=url, xref="paper", yref="y",
+                    x=-0.02, y=i, xanchor="right", yanchor="middle",
+                    sizex=0.05, sizey=0.7,
+                    layer="above"
+                ))
+                # Axe X haut
+                images.append(dict(
+                    source=url, xref="x", yref="paper",
+                    x=i, y=1.02, xanchor="center", yanchor="bottom",
+                    sizex=0.7, sizey=0.05,
+                    layer="above"
+                ))
 
             fig_wr.update_layout(
-                height=max(300, n * cell_size + 80),
-                margin=dict(t=60, b=20, l=60, r=20),
+                width=matrix_width,
+                height=max(280, n * cell_size + 80),
+                margin=dict(t=50, b=10, l=50, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 images=images,
                 xaxis=dict(
@@ -968,7 +987,7 @@ with tab_wr:
                     tickfont=dict(size=9), autorange="reversed", showgrid=False,
                 ),
             )
-            st.plotly_chart(fig_wr, use_container_width=True)
+            st.plotly_chart(fig_wr, use_container_width=False)
 
 with tab_logo:
     st.caption("Test de récupération des logos CoinMarketCap.")
