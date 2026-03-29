@@ -535,19 +535,7 @@ else:
 
             fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
             pnl_abs_max = max(abs(min(pnl_values)), abs(max(pnl_values))) * 1.25
-            fig_pnl.update_layout(
-                title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
-                height=260, margin=dict(t=40, b=24, l=48, r=24),
-                plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
-                yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
-                shapes=[dict(type="rect", xref="paper", yref="paper",
-                             x0=-0.06, y0=-0.08, x1=1.04, y1=1.12,
-                             line=dict(color="#ccc", width=1, dash="dash"), fillcolor="rgba(0,0,0,0)")]
-            )
-            fig_pnl.update_xaxes(title_text="", showgrid=False, tickfont=dict(size=10))
-            fig_pnl.update_yaxes(showgrid=False, tickfont=dict(size=10))
-            st.plotly_chart(fig_pnl, use_container_width=True)
-
+            # Tableau détail trades — au dessus des graphes
             with st.expander(f"Détail des {n_trades} trades"):
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
@@ -556,8 +544,6 @@ else:
                     f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
                     unsafe_allow_html=True
                 )
-
-                # Formater la colonne type avec flèches
                 df_display = df_trades.copy()
                 df_display["type"] = df_display["type"].apply(lambda t:
                     t.replace(f"LONG {name_a}", f"↑ {name_a}")
@@ -565,7 +551,6 @@ else:
                      .replace(f"LONG {name_b}", f"↑ {name_b}")
                      .replace(f"SHORT {name_b}", f"↓ {name_b}")
                 )
-
                 def _row_color(row):
                     try:
                         v = float(row["P&L ($)"])
@@ -573,15 +558,27 @@ else:
                         if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
                     except: pass
                     return [""] * len(row)
-
                 st.dataframe(
                     df_display.style.apply(_row_color, axis=1),
                     use_container_width=True,
                     hide_index=True,
                 )
 
-        st.divider()
+            fig_pnl.update_layout(
+                title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
+                height=260, margin=dict(t=40, b=24, l=48, r=24),
+                plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
+                yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
+            )
+            fig_pnl.update_xaxes(title_text="", showgrid=False, tickfont=dict(size=10))
+            fig_pnl.update_yaxes(showgrid=False, tickfont=dict(size=10))
+            st.plotly_chart(fig_pnl, use_container_width=True)
+
         df = m["df"]
+
+        # Plage de dates commune pour aligner les axes des 2 graphes
+        x_min = df.index.min()
+        x_max = df.index.max()
 
         # Préparer les dates et valeurs des marqueurs si des trades existent
         if trades:
@@ -655,10 +652,8 @@ else:
             height=260, margin=dict(t=40, b=24, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
+            xaxis=dict(range=[x_min, x_max]),
             yaxis=dict(range=[price_center - price_abs_max, price_center + price_abs_max]),
-            shapes=[dict(type="rect", xref="paper", yref="paper",
-                         x0=-0.06, y0=-0.08, x1=1.04, y1=1.12,
-                         line=dict(color="#ccc", width=1, dash="dash"), fillcolor="rgba(0,0,0,0)")]
         )
         fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig.update_yaxes(showgrid=False, tickfont=dict(size=10))
@@ -707,10 +702,8 @@ else:
             height=260, margin=dict(t=40, b=24, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
+            xaxis=dict(range=[x_min, x_max]),
             yaxis=dict(range=[-z_abs_max, z_abs_max]),
-            shapes=[dict(type="rect", xref="paper", yref="paper",
-                         x0=-0.06, y0=-0.08, x1=1.04, y1=1.12,
-                         line=dict(color="#ccc", width=1, dash="dash"), fillcolor="rgba(0,0,0,0)")]
         )
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
