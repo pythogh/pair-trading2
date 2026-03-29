@@ -179,31 +179,27 @@ if "token_logos" not in st.session_state:
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_all_logos(slugs: tuple) -> dict:
-    """Récupère tous les logos en un seul appel batch CoinGecko."""
+    """Récupère tous les logos en un seul appel batch CoinMarketCap."""
     import requests
     logos = {s: "" for s in slugs}
     try:
+        api_key = st.secrets.get("API_CMC", "")
         r = requests.get(
-            "https://api.coingecko.com/api/v3/coins/markets",
-            params={
-                "vs_currency": "usd",
-                "ids": ",".join(slugs),
-                "per_page": 250,
-                "page": 1,
-            },
-            headers={"x-cg-demo-api-key": API_KEY},
+            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info",
+            params={"slug": ",".join(slugs), "aux": "logo"},
+            headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
             timeout=15,
         )
         if r.status_code == 200:
-            for coin in r.json():
-                logos[coin["id"]] = coin.get("image", "")
+            for coin in r.json().get("data", {}).values():
+                slug = coin.get("slug", "")
+                if slug in logos:
+                    logos[slug] = coin.get("logo", "")
     except Exception:
         pass
     return logos
 
-if not st.session_state["token_logos"] or any(
-    v == "" for v in st.session_state["token_logos"].values()
-):
+if not st.session_state["token_logos"]:
     slugs = tuple(CRYPTOS.values())
     with st.spinner("Chargement des logos…"):
         st.session_state["token_logos"] = fetch_all_logos(slugs)
