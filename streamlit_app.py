@@ -237,8 +237,31 @@ if not st.session_state["token_logos"]:
     with st.spinner("Chargement des logos…"):
         st.session_state["token_logos"] = fetch_all_logos(tuple(CRYPTOS.keys()), _cmc_key)
 
+@st.cache_data(ttl=86400, show_spinner=False)
+def make_circular_logo(url: str) -> str:
+    """Télécharge une image et la rend circulaire, retourne une data URI base64."""
+    if not url or url.startswith("__"):
+        return ""
+    try:
+        import requests, io, base64
+        from PIL import Image, ImageDraw
+        r = requests.get(url, timeout=8)
+        if r.status_code != 200:
+            return url
+        img = Image.open(io.BytesIO(r.content)).convert("RGBA").resize((64, 64))
+        mask = Image.new("L", (64, 64), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, 64, 64), fill=255)
+        img.putalpha(mask)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        return f"data:image/png;base64,{b64}"
+    except Exception:
+        return url
+
 def get_logo(name: str) -> str:
-    return st.session_state["token_logos"].get(name, "")
+    url = st.session_state["token_logos"].get(name, "")
+    return make_circular_logo(url) if url else ""
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 _stale = any(
