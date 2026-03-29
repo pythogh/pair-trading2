@@ -189,7 +189,7 @@ def fetch_all_logos(token_names: tuple, api_key: str) -> dict:
         # Étape 1 — récupérer toute la map CMC (nom → id)
         r_map = requests.get(
             "https://pro-api.coinmarketcap.com/v1/cryptocurrency/map",
-            params={"listing_status": "active", "limit": 10000},
+            params={"listing_status": "active", "limit": 5000},
             headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
             timeout=20,
         )
