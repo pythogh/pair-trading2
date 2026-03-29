@@ -178,67 +178,68 @@ if "matrix_results" not in st.session_state:
 if "token_logos" not in st.session_state:
     st.session_state["token_logos"] = {}
 
-# ─── LOGOS ─────────────────────────────────────────────────────────────────────
+# ─── LOGOS + METADATA ──────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
-def fetch_all_logos(token_names: tuple, api_key: str) -> dict:
-    """2 appels CMC : /map pour résoudre les noms → IDs, puis /info pour les logos."""
+def fetch_token_metadata(slugs_map: tuple, api_key: str) -> dict:
+    """
+    Récupère logo, symbol et name depuis CMC.
+    slugs_map : tuple de (label, cmc_slug)
+    Retourne dict {label: {logo, symbol, name}}
+    """
     import requests
-    logos = {n: "" for n in token_names}
+    result = {label: {"logo": "", "symbol": "", "name": label} for label, _ in slugs_map}
     if not api_key:
-        logos["__error__"] = "Clé API_CMC manquante dans les secrets Streamlit."
-        return logos
+        result["__error__"] = "Clé API_CMC manquante."
+        return result
     try:
-        # Étape 1 — récupérer toute la map CMC (nom → id)
-        r_map = requests.get(
-            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/map",
-            params={"listing_status": "active", "limit": 5000},
-            headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
-            timeout=20,
-        )
-        if r_map.status_code != 200:
-            logos["__error__"] = f"/map HTTP {r_map.status_code}: {r_map.text[:200]}"
-            return logos
+        cmc_slugs = [cmc_slug for _, cmc_slug in slugs_map]
+        slug_to_label = {cmc_slug: label for label, cmc_slug in slugs_map}
 
-        name_to_id = {c["name"].lower(): c["id"] for c in r_map.json().get("data", [])}
-
-        # Résoudre chaque token
-        id_to_token = {}
-        for token in token_names:
-            cmc_id = name_to_id.get(token.lower())
-            if cmc_id:
-                id_to_token[str(cmc_id)] = token
-
-        if not id_to_token:
-            logos["__error__"] = "Aucun token résolu via /map"
-            return logos
-
-        # Étape 2 — logos par IDs
-        r_info = requests.get(
+        r = requests.get(
             "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info",
-            params={"id": ",".join(id_to_token.keys()), "aux": "logo"},
+            params={"slug": ",".join(cmc_slugs), "aux": "logo"},
             headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
             timeout=15,
         )
-        if r_info.status_code != 200:
-            logos["__error__"] = f"/info HTTP {r_info.status_code}: {r_info.text[:200]}"
-            return logos
-
-        for cmc_id, coin in r_info.json().get("data", {}).items():
-            token = id_to_token.get(str(cmc_id), "")
-            if token:
-                logos[token] = coin.get("logo", "")
-
+        if r.status_code == 200:
+            for coin in r.json().get("data", {}).values():
+                cmc_slug = coin.get("slug", "")
+                label = slug_to_label.get(cmc_slug, "")
+                if label:
+                    result[label] = {
+                        "logo":   coin.get("logo", ""),
+                        "symbol": coin.get("symbol", ""),
+                        "name":   coin.get("name", label),
+                    }
+        else:
+            result["__error__"] = f"HTTP {r.status_code}: {r.text[:300]}"
     except Exception as e:
-        logos["__error__"] = str(e)
-    return logos
+        result["__error__"] = str(e)
+    return result
+
+def load_tokens_map() -> dict:
+    """Utilise le slug du fichier CSV directement comme slug CMC."""
+    return {label: slug for label, slug in CRYPTOS.items()}
+
+TOKEN_CMC_MAP = load_tokens_map()
 
 if not st.session_state["token_logos"]:
     _cmc_key = st.secrets["API_CMC"] if "API_CMC" in st.secrets else ""
-    with st.spinner("Chargement des logos…"):
-        st.session_state["token_logos"] = fetch_all_logos(tuple(CRYPTOS.keys()), _cmc_key)
+    _slugs_map = tuple(TOKEN_CMC_MAP.items())
+    with st.spinner("Chargement des métadonnées tokens…"):
+        st.session_state["token_logos"] = fetch_token_metadata(_slugs_map, _cmc_key)
 
 def get_logo(name: str) -> str:
-    return st.session_state["token_logos"].get(name, "")
+    return st.session_state["token_logos"].get(name, {}).get("logo", "")
+
+def get_display_name(name: str) -> str:
+    """Retourne 'SYM · Name propre' ou le label par défaut."""
+    meta = st.session_state["token_logos"].get(name, {})
+    sym  = meta.get("symbol", "")
+    cmc_name = meta.get("name", name)
+    if sym and cmc_name:
+        return f"{sym} · {cmc_name}"
+    return name
 
 def logo_html(name: str, size: int = 18) -> str:
     url = get_logo(name)
@@ -950,16 +951,24 @@ with tab_logo:
 
     rows_html = ""
     for name in CRYPTOS.keys():
-        url = get_logo(name)
-        img = logo_html(name, 20)
-        status = "✅" if url else "❌"
-        rows_html += f"<tr><td style='padding:4px 8px'>{img}</td><td style='padding:4px 8px;font-size:12px'>{name}</td><td style='padding:4px 8px;font-size:11px;color:#888'>{status}</td></tr>"
-
+        img   = logo_html(name, 20)
+        dname = get_display_name(name)
+        cmc   = TOKEN_CMC_MAP.get(name, "—")
+        ok    = "✅" if get_logo(name) else "❌"
+        rows_html += (
+            f"<tr>"
+            f"<td style='padding:4px 8px'>{img}</td>"
+            f"<td style='padding:4px 8px;font-size:12px'>{dname}</td>"
+            f"<td style='padding:4px 8px;font-size:11px;color:#888'>{cmc}</td>"
+            f"<td style='padding:4px 8px'>{ok}</td>"
+            f"</tr>"
+        )
     st.markdown(
         f"<table style='border-collapse:collapse'><thead><tr>"
         f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Logo</th>"
         f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Token</th>"
-        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>OK</th>"
+        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Slug CMC</th>"
+        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'></th>"
         f"</tr></thead><tbody>{rows_html}</tbody></table>",
         unsafe_allow_html=True
     )
