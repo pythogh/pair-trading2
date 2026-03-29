@@ -25,7 +25,7 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="metric-container"] { background: #f7f6f3 !important; border-radius: 8px !important; padding: 10px 14px !important; border: none !important; }
 [data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
 [data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
-[data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 9px !important; color: #888 !important; }
+[data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
 .stApp { background-color: #ffffff !important; }
@@ -345,29 +345,26 @@ keys = list(CRYPTOS.keys())
 default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
 default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-# Ligne 1 : paires + bouton
-r1c1, r1c2, r1c3, _ = st.columns([1.0, 1.0, 0.4, 3.1])
-with r1c1:
+# Une seule ligne : Actif A | Actif B | Analyser | Entrée z | Sortie z | Stop z | Durée max
+c1, c2, c3, c4, c5, c6, c7, _ = st.columns([0.8, 0.8, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6])
+with c1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
-with r1c2:
+with c2:
     name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
-with r1c3:
+with c3:
     st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
     analyse = st.button("Analyser")
     st.markdown("</div>", unsafe_allow_html=True)
+with c4:
+    entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
+with c5:
+    exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
+with c6:
+    stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+with c7:
+    max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
 
 capital = 1000
-
-# Ligne 2 : paramètres backtest
-r2c1, r2c2, r2c3, r2c4, _ = st.columns([1.0, 1.0, 1.0, 1.0, 1.0])
-with r2c1:
-    entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
-with r2c2:
-    exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
-with r2c3:
-    stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
-with r2c4:
-    max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
 
 if name_a == name_b:
     st.warning("Choisis deux actifs différents.")
@@ -698,22 +695,17 @@ else:
             ))
 
         fig.update_layout(
-            title=dict(text=f"Évolution des prix — {name_a} (gauche) · {name_b} (droite)", font=dict(size=12)),
-            height=260, margin=dict(t=40, b=28, l=56, r=56),
+            title=dict(text=f"Évolution des prix — {name_a} · {name_b}", font=dict(size=12)),
+            height=260, margin=dict(t=40, b=28, l=48, r=48),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11)),
+            showlegend=False,
             xaxis=dict(range=[x_min, x_max], showgrid=False, tickfont=dict(size=10)),
-            yaxis=dict(
-                title=dict(text=name_a, font=dict(color=color_a, size=10)),
-                tickfont=dict(color=color_a, size=9),
-                showgrid=False,
-            ),
+            yaxis=dict(showgrid=False, tickfont=dict(color=color_a, size=9), title=None),
             yaxis2=dict(
-                title=dict(text=name_b, font=dict(color=color_b, size=10)),
-                tickfont=dict(color=color_b, size=9),
                 overlaying="y", side="right",
                 showgrid=False,
+                tickfont=dict(color=color_b, size=9),
+                title=None,
             ),
             shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                          line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
