@@ -177,28 +177,47 @@ if "token_logos" not in st.session_state:
     st.session_state["token_logos"] = {}
 
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
+# Mapping slug fichier CSV → slug CoinMarketCap (si différent)
+CMC_SLUG_MAP = {
+    "curve":       "curve-dao-token",
+    "fetch-ai":    "fetch-ai",         # à vérifier
+    "lido":        "lido-dao",
+    "optimism":    "optimism-ethereum",
+    "syrupfi":     "syrup",
+    "world-coin":  "worldcoin-org",
+}
+
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_all_logos(slugs: tuple, api_key: str) -> dict:
     """Récupère tous les logos en un seul appel batch CoinMarketCap."""
     import requests
     logos = {s: "" for s in slugs}
     if not api_key:
+        logos["__error__"] = "Clé API_CMC non trouvée dans les secrets Streamlit."
         return logos
+
+    # Traduire les slugs via le mapping
+    cmc_to_original = {}
+    cmc_slugs = []
+    for s in slugs:
+        cmc = CMC_SLUG_MAP.get(s, s)
+        cmc_slugs.append(cmc)
+        cmc_to_original[cmc] = s
+
     try:
         r = requests.get(
             "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info",
-            params={"slug": ",".join(slugs), "aux": "logo"},
+            params={"slug": ",".join(cmc_slugs), "aux": "logo"},
             headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
             timeout=15,
         )
         if r.status_code == 200:
             for coin in r.json().get("data", {}).values():
-                slug = coin.get("slug", "")
-                if slug in logos:
-                    logos[slug] = coin.get("logo", "")
+                cmc_slug = coin.get("slug", "")
+                original = cmc_to_original.get(cmc_slug, cmc_slug)
+                logos[original] = coin.get("logo", "")
         else:
-            # Stocker le code d'erreur pour debug
-            logos["__error__"] = f"HTTP {r.status_code}: {r.text[:200]}"
+            logos["__error__"] = f"HTTP {r.status_code}: {r.text[:300]}"
     except Exception as e:
         logos["__error__"] = str(e)
     return logos
