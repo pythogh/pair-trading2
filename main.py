@@ -60,7 +60,7 @@ if not CRYPTOS:
 TOKEN_COLORS = {
     "Bitcoin":      "#F7931A",
     "Ethereum":     "#8C8C8C",
-    "Hyperliquid":  "rgb(151, 252, 228)",
+    "Hyperliquid":  "#97FCE4",
 }
 
 def token_color(name: str) -> str:
