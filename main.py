@@ -359,13 +359,15 @@ with r1c3:
 capital = 1000
 
 # Ligne 2 : paramètres backtest
-r2c1, r2c2, r2c3, _ = st.columns([1.0, 1.0, 1.0, 2.0])
+r2c1, r2c2, r2c3, r2c4, _ = st.columns([1.0, 1.0, 1.0, 1.0, 1.0])
 with r2c1:
     entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
 with r2c2:
     exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
 with r2c3:
     stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+with r2c4:
+    max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
 
 if name_a == name_b:
     st.warning("Choisis deux actifs différents.")
@@ -442,8 +444,10 @@ else:
                     (position["direction"] == "short_a" and z_val < exit_z) or
                     (position["direction"] == "long_a"  and z_val > -exit_z)
                 )
-                exit_stop = abs(z_val) > stop_z
-                if exit_normal or exit_stop:
+                exit_stop     = abs(z_val) > stop_z
+                exit_duration = (date - position["entry_date"]).days >= max_duration
+                if exit_normal or exit_stop or exit_duration:
+                    raison = "Stop-loss" if exit_stop else ("Durée max" if exit_duration else "Retour à la moyenne")
                     if position["direction"] == "short_a":
                         pnl_a = (position["entry_price_a"] - price_a) * position["units_a"]
                         pnl_b = (price_b - position["entry_price_b"]) * position["units_b"]
@@ -466,7 +470,7 @@ else:
                         f"P&L {name_a} ($)":  round(pnl_a, 2),
                         f"P&L {name_b} ($)":  round(pnl_b, 2),
                         "P&L ($)":            round(pnl_total, 2),
-                        "raison":             "Stop-loss" if exit_stop else "Retour à la moyenne",
+                        "raison":             raison,
                     })
                     position = None
 
