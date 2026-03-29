@@ -348,8 +348,17 @@ else:
         def _color_signal(val):
             return ""  # pas de coloration sur le signal
 
+        # Ajouter les colonnes logo
+        df_display = df_tab1_signal.reset_index(drop=True).copy()
+        df_display.insert(0, "  ", df_display["Paire"].apply(
+            lambda p: get_logo(p.split(" / ")[0]) if " / " in p else ""
+        ))
+        df_display.insert(2, "   ", df_display["Paire"].apply(
+            lambda p: get_logo(p.split(" / ")[1]) if " / " in p else ""
+        ))
+
         st.dataframe(
-            df_tab1_signal.reset_index(drop=True).style
+            df_display.style
             .applymap(_color_verdict,  subset=["Verdict"])
             .applymap(_color_corr,     subset=["Corrélation"])
             .applymap(_color_p,        subset=["Co-intégration p"])
@@ -364,6 +373,10 @@ else:
             }),
             use_container_width=True,
             hide_index=True,
+            column_config={
+                "  ":  st.column_config.ImageColumn("", width="small"),
+                "   ": st.column_config.ImageColumn("", width="small"),
+            }
         )
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
