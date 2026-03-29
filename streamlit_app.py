@@ -420,6 +420,33 @@ else:
             hide_index=True,
         )
 
+# ── Paramètres globaux ────────────────────────────────────────────────────────
+import datetime as dt
+st.markdown("<p style='font-size:11px;color:#aaa;margin:8px 0 4px'>Paramètres de stratégie</p>", unsafe_allow_html=True)
+gp1, gp2, gp3, gp4, gp5 = st.columns([0.4, 0.4, 0.4, 0.4, 2.4])
+with gp1:
+    entry_z = st.number_input("Entrée z", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
+with gp2:
+    exit_z = st.number_input("Sortie z", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
+with gp3:
+    stop_z = st.number_input("Stop z", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+with gp4:
+    max_duration = st.number_input("Durée j", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
+with gp5:
+    today = dt.date.today()
+    period_days = st.slider(
+        "Période d'analyse",
+        min_value=30, max_value=730, value=365, step=30,
+        format="%d j",
+        key="bt_period"
+    )
+    date_start = today - dt.timedelta(days=period_days)
+    date_end   = today
+    st.caption(f"{date_start.strftime('%d %b %Y')} → {date_end.strftime('%d %b %Y')}")
+
+ts_start = pd.Timestamp(date_start)
+ts_end   = pd.Timestamp(date_end)
+
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
@@ -430,9 +457,7 @@ with tab_bt:
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-    import datetime as dt
-    # Une ligne : Actif A | Actif B | Analyser | z params (petits) | dates
-    c1, c2, c3, c4, c5, c6, c7, c8, c9 = st.columns([0.8, 0.8, 0.35, 0.35, 0.35, 0.35, 0.35, 0.6, 0.6])
+    c1, c2, c3, _ = st.columns([0.8, 0.8, 0.35, 2.05])
     with c1:
         name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
     with c2:
@@ -441,18 +466,6 @@ with tab_bt:
         st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
         analyse = st.button("Analyser")
         st.markdown("</div>", unsafe_allow_html=True)
-    with c4:
-        entry_z = st.number_input("Entrée z", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
-    with c5:
-        exit_z = st.number_input("Sortie z", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
-    with c6:
-        stop_z = st.number_input("Stop z", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
-    with c7:
-        max_duration = st.number_input("Durée j", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
-    with c8:
-        date_start = st.date_input("Début", value=dt.date.today() - dt.timedelta(days=365), key="bt_date_start")
-    with c9:
-        date_end = st.date_input("Fin", value=dt.date.today(), key="bt_date_end")
 
     capital = 1000
 
@@ -498,8 +511,6 @@ with tab_bt:
             df_prices = m["df"]
 
             # Filtrer sur la période sélectionnée
-            ts_start = pd.Timestamp(date_start)
-            ts_end   = pd.Timestamp(date_end)
             z_score_series = z_score_series[(z_score_series.index >= ts_start) & (z_score_series.index <= ts_end)]
             df_prices = df_prices[(df_prices.index >= ts_start) & (df_prices.index <= ts_end)]
 
