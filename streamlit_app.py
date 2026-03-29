@@ -56,6 +56,30 @@ if not CRYPTOS:
     st.error(f"Aucun fichier trouvé dans `{DATA_DIR}/`. Vérifie que tes CSV sont bien au format `nom-historical-data.csv`.")
     st.stop()
 
+# ─── COULEURS PAR TOKEN ────────────────────────────────────────────────────────
+# Ajoute ici les couleurs de tes tokens (label exact tel qu'il apparaît dans l'app)
+TOKEN_COLORS = {
+    "Bitcoin":    "#F7931A",
+    "Ethereum":   "#8C8C8C",
+    "Solana":     "#9945FF",
+    "Bnb":        "#F3BA2F",
+    "Xrp":        "#346AA9",
+    "Cardano":    "#0033AD",
+    "Avalanche":  "#E84142",
+    "Polygon":    "#8247E5",
+    "Chainlink":  "#2A5ADA",
+    "Uniswap":    "#FF007A",
+    "Aave":       "#B6509E",
+    "Arbitrum":   "#28A0F0",
+    "Optimism":   "#FF0420",
+    "Lido":       "#00A3FF",
+    # Ajoute tes tokens ici avec leurs couleurs
+}
+
+def token_color(name: str) -> str:
+    """Retourne la couleur d'un token, ou une couleur par défaut."""
+    return TOKEN_COLORS.get(name, "#888888")
+
 # ─── FONCTIONS ─────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def fetch_prices(slug):
@@ -572,14 +596,25 @@ else:
                 def _color_pnl_leg(val):
                     try:
                         v = float(val)
-                        if v > 0: return "color:#0F6E56;font-weight:500"
-                        if v < 0: return "color:#A32D2D;font-weight:500"
+                        if v > 0: return "color:#0F6E56;font-weight:700"
+                        if v < 0: return "color:#A32D2D;font-weight:700"
                     except: pass
-                    return ""
+                    return "font-weight:700"
 
-                styled = df_display.style.apply(_row_color, axis=1)
+                def _fmt_pnl(v):
+                    try:
+                        return f"{float(v):+.2f}$"
+                    except:
+                        return v
+
+                fmt_dict = {"P&L ($)": _fmt_pnl}
                 if pnl_a_col in df_display.columns:
-                    styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col])
+                    fmt_dict[pnl_a_col] = _fmt_pnl
+                    fmt_dict[pnl_b_col] = _fmt_pnl
+
+                styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
+                if pnl_a_col in df_display.columns:
+                    styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
 
                 st.dataframe(styled, use_container_width=True, hide_index=True)
 
@@ -635,8 +670,8 @@ else:
 
         # Graphe 1 — prix normalisés
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df["A"]/df["A"].iloc[0], name=name_a, line=dict(color="#1D9E75", width=1.5)))
-        fig.add_trace(go.Scatter(x=df.index, y=df["B"]/df["B"].iloc[0], name=name_b, line=dict(color="#7F77DD", width=1.5)))
+        fig.add_trace(go.Scatter(x=df.index, y=df["A"]/df["A"].iloc[0], name=name_a, line=dict(color=token_color(name_a), width=1.5)))
+        fig.add_trace(go.Scatter(x=df.index, y=df["B"]/df["B"].iloc[0], name=name_b, line=dict(color=token_color(name_b), width=1.5)))
 
         if trades:
             entry_y_a = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in entry_dates]
