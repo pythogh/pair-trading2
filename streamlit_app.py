@@ -30,10 +30,9 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
 .stApp { background-color: #ffffff !important; }
 /* Bordure pointillés + espacement uniforme sur les graphes Plotly */
-[data-testid="stPlotlyChart"] {
-    border: 1px dashed #ccc !important;
-    border-radius: 8px !important;
-    padding: 4px !important;
+[data-testid="stPlotlyChart"],
+[data-testid="stPlotlyChart"] > div,
+.stPlotlyChart {
     margin-bottom: 24px !important;
 }
 </style>
@@ -586,9 +585,11 @@ else:
 
             fig_pnl.update_layout(
                 title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
-                height=260, margin=dict(t=40, b=24, l=48, r=24),
+                height=260, margin=dict(t=40, b=28, l=48, r=24),
                 plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
                 yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
+                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                             line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
             )
             fig_pnl.update_xaxes(title_text="", showgrid=False, tickfont=dict(size=10))
             fig_pnl.update_yaxes(showgrid=False, tickfont=dict(size=10))
@@ -669,11 +670,13 @@ else:
         ) * 1.15
         fig.update_layout(
             title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-            height=260, margin=dict(t=40, b=24, l=48, r=24),
+            height=260, margin=dict(t=40, b=28, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
             xaxis=dict(range=[x_min, x_max]),
             yaxis=dict(range=[price_center - price_abs_max, price_center + price_abs_max]),
+            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                         line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
         )
         fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig.update_yaxes(showgrid=False, tickfont=dict(size=10))
@@ -719,11 +722,13 @@ else:
         z_abs_max = max(abs(z_score_series.max()), abs(z_score_series.min())) * 1.15
         fig2.update_layout(
             title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-            height=260, margin=dict(t=40, b=24, l=48, r=24),
+            height=260, margin=dict(t=40, b=28, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
             xaxis=dict(range=[x_min, x_max]),
             yaxis=dict(range=[-z_abs_max, z_abs_max]),
+            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                         line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
         )
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
