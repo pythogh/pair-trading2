@@ -24,7 +24,7 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 .stButton > button:hover { background: #333 !important; }
 [data-testid="metric-container"] { background: #f7f6f3 !important; border-radius: 8px !important; padding: 10px 14px !important; border: none !important; }
 [data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
-[data-testid="stMetricValue"] { font-size: 15px !important; font-weight: 500 !important; }
+[data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
 [data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
@@ -336,503 +336,502 @@ else:
             hide_index=True,
         )
 
-# ── Backtest ──────────────────────────────────────────────────────────────────
+# ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 st.divider()
-st.markdown("#### Backtest")
-st.caption("Capital par défaut : 1 000 $")
+tab_bt, tab_wr = st.tabs(["🔍 Backtest", "🏆 Win Rate"])
 
-keys = list(CRYPTOS.keys())
-default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
-default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
+with tab_bt:
+    st.markdown("#### Backtest")
+    st.caption("Capital par défaut : 1 000 $")
 
-# Une seule ligne : Actif A | Actif B | Analyser | Entrée z | Sortie z | Stop z | Durée max
-c1, c2, c3, c4, c5, c6, c7, _ = st.columns([0.8, 0.8, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6])
-with c1:
-    name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
-with c2:
-    name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
-with c3:
-    st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-    analyse = st.button("Analyser")
-    st.markdown("</div>", unsafe_allow_html=True)
-with c4:
-    entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
-with c5:
-    exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
-with c6:
-    stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
-with c7:
-    max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
+    keys = list(CRYPTOS.keys())
+    default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
+    default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-capital = 1000
+    # Une seule ligne : Actif A | Actif B | Analyser | Entrée z | Sortie z | Stop z | Durée max
+    c1, c2, c3, c4, c5, c6, c7, _ = st.columns([0.8, 0.8, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6])
+    with c1:
+        name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
+    with c2:
+        name_b = st.selectbox("Actif B", keys, index=default_b, key="sel_b")
+    with c3:
+        st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+        analyse = st.button("Analyser")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with c4:
+        entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
+    with c5:
+        exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
+    with c6:
+        stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+    with c7:
+        max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
 
-if name_a == name_b:
-    st.warning("Choisis deux actifs différents.")
-else:
-    # Lancement de l'analyse au clic — stocke les résultats dans session_state
-    if analyse:
-        s_a, err_a = fetch_prices(CRYPTOS[name_a])
-        s_b, err_b = fetch_prices(CRYPTOS[name_b])
-        if err_a:
-            st.error(f"❌ {name_a} : {err_a}")
-        elif err_b:
-            st.error(f"❌ {name_b} : {err_b}")
-        else:
-            m = compute_metrics(s_a, s_b, name_a, name_b)
-            if m is None:
-                st.error("Pas assez de données communes pour calculer.")
+    capital = 1000
+
+    if name_a == name_b:
+        st.warning("Choisis deux actifs différents.")
+    else:
+        # Lancement de l'analyse au clic — stocke les résultats dans session_state
+        if analyse:
+            s_a, err_a = fetch_prices(CRYPTOS[name_a])
+            s_b, err_b = fetch_prices(CRYPTOS[name_b])
+            if err_a:
+                st.error(f"❌ {name_a} : {err_a}")
+            elif err_b:
+                st.error(f"❌ {name_b} : {err_b}")
             else:
-                beta = m["Hedge Ratio (β)"]
-                p_a = float(s_a.iloc[-1])
-                p_b = float(s_b.iloc[-1])
-                ratio = abs(beta * p_b / p_a)
-                alloc_a = capital / (1 + ratio)
-                alloc_b = capital - alloc_a
-                # Stocker tout ce qui est nécessaire au backtest
-                st.session_state["bt_data"] = {
-                    "m": m,
-                    "name_a": name_a,
-                    "name_b": name_b,
-                    "alloc_a": alloc_a,
-                    "alloc_b": alloc_b,
-                }
-
-    # Affichage du backtest — utilise les données en cache, se recalcule à chaque interaction
-    if "bt_data" in st.session_state and st.session_state["bt_data"]["name_a"] == name_a and st.session_state["bt_data"]["name_b"] == name_b:
-        bt = st.session_state["bt_data"]
-        m        = bt["m"]
-        alloc_a  = bt["alloc_a"]
-        alloc_b  = bt["alloc_b"]
-
-        z_score_series = m["z_score"].dropna()
-        df_prices = m["df"]
-        trades = []
-        position = None
-
-        for date, z_val in z_score_series.items():
-            if date not in df_prices.index:
-                continue
-            price_a = df_prices.loc[date, "A"]
-            price_b = df_prices.loc[date, "B"]
-
-            if position is None:
-                if z_val > entry_z:
-                    units_a = alloc_a / price_a
-                    units_b = alloc_b / price_b
-                    position = {
-                        "type": f"SHORT {name_a} / LONG {name_b}",
-                        "entry_date": date, "entry_z": z_val,
-                        "entry_price_a": price_a, "entry_price_b": price_b,
-                        "units_a": units_a, "units_b": units_b,
-                        "direction": "short_a",
+                m = compute_metrics(s_a, s_b, name_a, name_b)
+                if m is None:
+                    st.error("Pas assez de données communes pour calculer.")
+                else:
+                    beta = m["Hedge Ratio (β)"]
+                    p_a = float(s_a.iloc[-1])
+                    p_b = float(s_b.iloc[-1])
+                    ratio = abs(beta * p_b / p_a)
+                    alloc_a = capital / (1 + ratio)
+                    alloc_b = capital - alloc_a
+                    # Stocker tout ce qui est nécessaire au backtest
+                    st.session_state["bt_data"] = {
+                        "m": m,
+                        "name_a": name_a,
+                        "name_b": name_b,
+                        "alloc_a": alloc_a,
+                        "alloc_b": alloc_b,
                     }
-                elif z_val < -entry_z:
-                    units_a = alloc_a / price_a
-                    units_b = alloc_b / price_b
-                    position = {
-                        "type": f"LONG {name_a} / SHORT {name_b}",
-                        "entry_date": date, "entry_z": z_val,
-                        "entry_price_a": price_a, "entry_price_b": price_b,
-                        "units_a": units_a, "units_b": units_b,
-                        "direction": "long_a",
-                    }
+
+        # Affichage du backtest — utilise les données en cache, se recalcule à chaque interaction
+        if "bt_data" in st.session_state and st.session_state["bt_data"]["name_a"] == name_a and st.session_state["bt_data"]["name_b"] == name_b:
+            bt = st.session_state["bt_data"]
+            m        = bt["m"]
+            alloc_a  = bt["alloc_a"]
+            alloc_b  = bt["alloc_b"]
+
+            z_score_series = m["z_score"].dropna()
+            df_prices = m["df"]
+            trades = []
+            position = None
+
+            for date, z_val in z_score_series.items():
+                if date not in df_prices.index:
+                    continue
+                price_a = df_prices.loc[date, "A"]
+                price_b = df_prices.loc[date, "B"]
+
+                if position is None:
+                    if z_val > entry_z:
+                        units_a = alloc_a / price_a
+                        units_b = alloc_b / price_b
+                        position = {
+                            "type": f"SHORT {name_a} / LONG {name_b}",
+                            "entry_date": date, "entry_z": z_val,
+                            "entry_price_a": price_a, "entry_price_b": price_b,
+                            "units_a": units_a, "units_b": units_b,
+                            "direction": "short_a",
+                        }
+                    elif z_val < -entry_z:
+                        units_a = alloc_a / price_a
+                        units_b = alloc_b / price_b
+                        position = {
+                            "type": f"LONG {name_a} / SHORT {name_b}",
+                            "entry_date": date, "entry_z": z_val,
+                            "entry_price_a": price_a, "entry_price_b": price_b,
+                            "units_a": units_a, "units_b": units_b,
+                            "direction": "long_a",
+                        }
+                else:
+                    exit_normal = (
+                        (position["direction"] == "short_a" and z_val < exit_z) or
+                        (position["direction"] == "long_a"  and z_val > -exit_z)
+                    )
+                    exit_stop     = abs(z_val) > stop_z
+                    exit_duration = (date - position["entry_date"]).days >= max_duration
+                    if exit_normal or exit_stop or exit_duration:
+                        raison = "Stop-loss" if exit_stop else ("Durée max" if exit_duration else "Retour à la moyenne")
+                        if position["direction"] == "short_a":
+                            pnl_a = (position["entry_price_a"] - price_a) * position["units_a"]
+                            pnl_b = (price_b - position["entry_price_b"]) * position["units_b"]
+                        else:
+                            pnl_a = (price_a - position["entry_price_a"]) * position["units_a"]
+                            pnl_b = (position["entry_price_b"] - price_b) * position["units_b"]
+                        pnl_total = pnl_a + pnl_b
+                        trades.append({
+                            "#":                  len(trades) + 1,
+                            "entrée":             position["entry_date"].strftime("%Y-%m-%d"),
+                            "sortie":             date.strftime("%Y-%m-%d"),
+                            "durée (j)":          (date - position["entry_date"]).days,
+                            "type":               position["type"],
+                            "z entrée":           round(position["entry_z"], 2),
+                            "z sortie":           round(z_val, 2),
+                            f"{name_a} entrée $": round(position["entry_price_a"], 4),
+                            f"{name_a} sortie $": round(price_a, 4),
+                            f"{name_b} entrée $": round(position["entry_price_b"], 4),
+                            f"{name_b} sortie $": round(price_b, 4),
+                            f"P&L {name_a} ($)":  round(pnl_a, 2),
+                            f"P&L {name_b} ($)":  round(pnl_b, 2),
+                            "P&L ($)":            round(pnl_total, 2),
+                            "raison":             raison,
+                        })
+                        position = None
+
+            if not trades:
+                st.info("Aucun trade déclenché sur la période avec ces paramètres.")
             else:
-                exit_normal = (
-                    (position["direction"] == "short_a" and z_val < exit_z) or
-                    (position["direction"] == "long_a"  and z_val > -exit_z)
-                )
-                exit_stop     = abs(z_val) > stop_z
-                exit_duration = (date - position["entry_date"]).days >= max_duration
-                if exit_normal or exit_stop or exit_duration:
-                    raison = "Stop-loss" if exit_stop else ("Durée max" if exit_duration else "Retour à la moyenne")
-                    if position["direction"] == "short_a":
-                        pnl_a = (position["entry_price_a"] - price_a) * position["units_a"]
-                        pnl_b = (price_b - position["entry_price_b"]) * position["units_b"]
-                    else:
-                        pnl_a = (price_a - position["entry_price_a"]) * position["units_a"]
-                        pnl_b = (position["entry_price_b"] - price_b) * position["units_b"]
-                    pnl_total = pnl_a + pnl_b
-                    trades.append({
-                        "#":                  len(trades) + 1,
-                        "entrée":             position["entry_date"].strftime("%Y-%m-%d"),
-                        "sortie":             date.strftime("%Y-%m-%d"),
-                        "durée (j)":          (date - position["entry_date"]).days,
-                        "type":               position["type"],
-                        "z entrée":           round(position["entry_z"], 2),
-                        "z sortie":           round(z_val, 2),
-                        f"{name_a} entrée $": round(position["entry_price_a"], 4),
-                        f"{name_a} sortie $": round(price_a, 4),
-                        f"{name_b} entrée $": round(position["entry_price_b"], 4),
-                        f"{name_b} sortie $": round(price_b, 4),
-                        f"P&L {name_a} ($)":  round(pnl_a, 2),
-                        f"P&L {name_b} ($)":  round(pnl_b, 2),
-                        "P&L ($)":            round(pnl_total, 2),
-                        "raison":             raison,
-                    })
-                    position = None
+                df_trades  = pd.DataFrame(trades)
+                n_trades   = len(df_trades)
+                n_win      = (df_trades["P&L ($)"] > 0).sum()
+                win_rate   = n_win / n_trades
+                pnl_values = df_trades["P&L ($)"].cumsum().tolist()
+                total_pnl  = pnl_values[-1]
+                cummax     = pd.Series(pnl_values).cummax()
+                max_dd     = (pd.Series(pnl_values) - cummax).min()
+                rets       = df_trades["P&L ($)"]
+                sharpe     = (rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0
 
-        if not trades:
-            st.info("Aucun trade déclenché sur la période avec ces paramètres.")
-        else:
-            df_trades  = pd.DataFrame(trades)
-            n_trades   = len(df_trades)
-            n_win      = (df_trades["P&L ($)"] > 0).sum()
-            win_rate   = n_win / n_trades
-            pnl_values = df_trades["P&L ($)"].cumsum().tolist()
-            total_pnl  = pnl_values[-1]
-            cummax     = pd.Series(pnl_values).cummax()
-            max_dd     = (pd.Series(pnl_values) - cummax).min()
-            rets       = df_trades["P&L ($)"]
-            sharpe     = (rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0
+                pnl_color  = "#0F6E56" if total_pnl >= 0 else "#A32D2D"
+                pnl_icon   = "▲" if total_pnl >= 0 else "▼"
+                wr_color   = "#0F6E56" if win_rate >= 0.5 else "#A32D2D"
+                wr_icon    = "▲" if win_rate >= 0.5 else "▼"
+                dd_color   = "#A32D2D" if max_dd < 0 else "#0F6E56"
+                sh_color   = "#0F6E56" if sharpe >= 1 else ("#854F0B" if sharpe >= 0 else "#A32D2D")
+                sh_icon    = "▲" if sharpe >= 1 else ("—" if sharpe >= 0 else "▼")
 
-            pnl_color  = "#0F6E56" if total_pnl >= 0 else "#A32D2D"
-            pnl_icon   = "▲" if total_pnl >= 0 else "▼"
-            wr_color   = "#0F6E56" if win_rate >= 0.5 else "#A32D2D"
-            wr_icon    = "▲" if win_rate >= 0.5 else "▼"
-            dd_color   = "#A32D2D" if max_dd < 0 else "#0F6E56"
-            sh_color   = "#0F6E56" if sharpe >= 1 else ("#854F0B" if sharpe >= 0 else "#A32D2D")
-            sh_icon    = "▲" if sharpe >= 1 else ("—" if sharpe >= 0 else "▼")
+                bt_cards = [
+                    ("P&L cumulé",   f"<span style='color:{pnl_color}'>{pnl_icon} {total_pnl:+.0f}$</span>"),
+                    ("Trades",       f"<span style='color:#333'>{n_trades}</span>"),
+                    ("Win rate",     f"<span style='color:{wr_color}'>{wr_icon} {win_rate:.0%}</span>"),
+                    ("Drawdown max", f"<span style='color:{dd_color}'>▼ {max_dd:.0f}$</span>"),
+                    ("Sharpe",       f"<span style='color:{sh_color}'>{sh_icon} {sharpe:.2f}</span>"),
+                ]
+                st.markdown("<div style='margin:16px 0 6px'></div>", unsafe_allow_html=True)
+                bt_cols = st.columns(5)
+                for col, (label, value) in zip(bt_cols, bt_cards):
+                    with col:
+                        st.markdown(
+                            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:12px 14px 10px;">
+                            <p style="font-size:10px;color:#aaa;margin:0 0 6px">{label}</p>
+                            <p style="font-size:20px;font-weight:500;margin:0">{value}</p>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
 
-            bt_cards = [
-                ("P&L cumulé",   f"<span style='color:{pnl_color}'>{pnl_icon} {total_pnl:+.0f}$</span>"),
-                ("Trades",       f"<span style='color:#333'>{n_trades}</span>"),
-                ("Win rate",     f"<span style='color:{wr_color}'>{wr_icon} {win_rate:.0%}</span>"),
-                ("Drawdown max", f"<span style='color:{dd_color}'>▼ {max_dd:.0f}$</span>"),
-                ("Sharpe",       f"<span style='color:{sh_color}'>{sh_icon} {sharpe:.2f}</span>"),
-            ]
-            st.markdown("<div style='margin:16px 0 6px'></div>", unsafe_allow_html=True)
-            bt_cols = st.columns(5)
-            for col, (label, value) in zip(bt_cols, bt_cards):
-                with col:
+                # Tableau détail trades
+                with st.expander(f"Détail des {n_trades} trades"):
                     st.markdown(
-                        f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:12px 14px 10px;">
-                        <p style="font-size:10px;color:#aaa;margin:0 0 6px">{label}</p>
-                        <p style="font-size:20px;font-weight:500;margin:0">{value}</p>
-                        </div>""",
+                        f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
+                        f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
+                        f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
+                        f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
                         unsafe_allow_html=True
                     )
-            st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
+                    df_display = df_trades.copy()
+                    df_display["type"] = df_display["type"].apply(lambda t:
+                        t.replace(f"LONG {name_a}", f"↑ {name_a}")
+                         .replace(f"SHORT {name_a}", f"↓ {name_a}")
+                         .replace(f"LONG {name_b}", f"↑ {name_b}")
+                         .replace(f"SHORT {name_b}", f"↓ {name_b}")
+                    )
+                    def _row_color(row):
+                        try:
+                            v = float(row["P&L ($)"])
+                            if v > 0: return ["background-color:#e8f7f1;color:#0F6E56"] * len(row)
+                            if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
+                        except: pass
+                        return [""] * len(row)
 
-            # Tableau détail trades
-            with st.expander(f"Détail des {n_trades} trades"):
-                st.markdown(
-                    f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
-                    f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
-                    f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
-                    f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
-                    unsafe_allow_html=True
-                )
-                df_display = df_trades.copy()
-                df_display["type"] = df_display["type"].apply(lambda t:
-                    t.replace(f"LONG {name_a}", f"↑ {name_a}")
-                     .replace(f"SHORT {name_a}", f"↓ {name_a}")
-                     .replace(f"LONG {name_b}", f"↑ {name_b}")
-                     .replace(f"SHORT {name_b}", f"↓ {name_b}")
-                )
-                def _row_color(row):
-                    try:
-                        v = float(row["P&L ($)"])
-                        if v > 0: return ["background-color:#e8f7f1;color:#0F6E56"] * len(row)
-                        if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
-                    except: pass
-                    return [""] * len(row)
+                    pnl_a_col = f"P&L {name_a} ($)"
+                    pnl_b_col = f"P&L {name_b} ($)"
 
-                pnl_a_col = f"P&L {name_a} ($)"
-                pnl_b_col = f"P&L {name_b} ($)"
+                    def _color_pnl_leg(val):
+                        try:
+                            v = float(val)
+                            if v > 0: return "color:#0F6E56;font-weight:700"
+                            if v < 0: return "color:#A32D2D;font-weight:700"
+                        except: pass
+                        return "font-weight:700"
 
-                def _color_pnl_leg(val):
-                    try:
-                        v = float(val)
-                        if v > 0: return "color:#0F6E56;font-weight:700"
-                        if v < 0: return "color:#A32D2D;font-weight:700"
-                    except: pass
-                    return "font-weight:700"
+                    def _fmt_pnl(v):
+                        try: return f"{float(v):+.2f}$"
+                        except: return v
 
-                def _fmt_pnl(v):
-                    try: return f"{float(v):+.2f}$"
-                    except: return v
+                    fmt_dict = {"P&L ($)": _fmt_pnl}
+                    if pnl_a_col in df_display.columns:
+                        fmt_dict[pnl_a_col] = _fmt_pnl
+                        fmt_dict[pnl_b_col] = _fmt_pnl
 
-                fmt_dict = {"P&L ($)": _fmt_pnl}
-                if pnl_a_col in df_display.columns:
-                    fmt_dict[pnl_a_col] = _fmt_pnl
-                    fmt_dict[pnl_b_col] = _fmt_pnl
+                    styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
+                    if pnl_a_col in df_display.columns:
+                        styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
+                    st.dataframe(styled, use_container_width=True, hide_index=True)
 
-                styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
-                if pnl_a_col in df_display.columns:
-                    styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
-                st.dataframe(styled, use_container_width=True, hide_index=True)
+            df = m["df"]
 
-        df = m["df"]
+            # Plage de dates commune pour aligner les axes des 2 graphes
+            x_min = df.index.min()
+            x_max = df.index.max()
 
-        # Plage de dates commune pour aligner les axes des 2 graphes
-        x_min = df.index.min()
-        x_max = df.index.max()
+            # Préparer les dates et valeurs des marqueurs si des trades existent
+            if trades:
+                entry_dates  = pd.to_datetime(df_trades["entrée"])
+                exit_dates   = pd.to_datetime(df_trades["sortie"])
+                entry_colors = ["#1D9E75" if t.startswith("LONG") else "#E24B4A" for t in df_trades["type"]]
+                exit_colors  = ["#E24B4A" if t.startswith("LONG") else "#1D9E75" for t in df_trades["type"]]
+                trade_nums   = list(range(1, n_trades + 1))
 
-        # Préparer les dates et valeurs des marqueurs si des trades existent
-        if trades:
-            entry_dates  = pd.to_datetime(df_trades["entrée"])
-            exit_dates   = pd.to_datetime(df_trades["sortie"])
-            entry_colors = ["#1D9E75" if t.startswith("LONG") else "#E24B4A" for t in df_trades["type"]]
-            exit_colors  = ["#E24B4A" if t.startswith("LONG") else "#1D9E75" for t in df_trades["type"]]
-            trade_nums   = list(range(1, n_trades + 1))
+                # Prix réels aux dates d'entrée et sortie
+                entry_pa = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in entry_dates]
+                entry_pb = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in entry_dates]
+                exit_pa  = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in exit_dates]
+                exit_pb  = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in exit_dates]
 
-            # Prix réels aux dates d'entrée et sortie
-            entry_pa = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in entry_dates]
-            entry_pb = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in entry_dates]
-            exit_pa  = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in exit_dates]
-            exit_pb  = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in exit_dates]
+                entry_hover = [
+                    f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
+                    f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {ze:.2f}"
+                    for n, t, d, pa, pb, ze in zip(
+                        trade_nums, df_trades["type"], entry_dates,
+                        entry_pa, entry_pb, df_trades["z entrée"]
+                    )
+                ]
+                exit_hover = [
+                    f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
+                    f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {zs:.2f}<br>"
+                    f"P&L : <b>{pnl:+.2f}$</b>"
+                    for n, r, d, pa, pb, zs, pnl in zip(
+                        trade_nums, df_trades["raison"], exit_dates,
+                        exit_pa, exit_pb, df_trades["z sortie"], df_trades["P&L ($)"]
+                    )
+                ]
 
-            entry_hover = [
-                f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
-                f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {ze:.2f}"
-                for n, t, d, pa, pb, ze in zip(
-                    trade_nums, df_trades["type"], entry_dates,
-                    entry_pa, entry_pb, df_trades["z entrée"]
-                )
-            ]
-            exit_hover = [
-                f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
-                f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {zs:.2f}<br>"
-                f"P&L : <b>{pnl:+.2f}$</b>"
-                for n, r, d, pa, pb, zs, pnl in zip(
-                    trade_nums, df_trades["raison"], exit_dates,
-                    exit_pa, exit_pb, df_trades["z sortie"], df_trades["P&L ($)"]
-                )
-            ]
-
-        # Graphe 1 — double axe Y avec prix réels
-        color_a = "#1B4F8A"   # bleu foncé
-        color_b = "#5BA4CF"   # bleu clair
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df.index, y=df["A"], name=name_a,
-            line=dict(color=color_a, width=1.5),
-            yaxis="y1"
-        ))
-        fig.add_trace(go.Scatter(
-            x=df.index, y=df["B"], name=name_b,
-            line=dict(color=color_b, width=1.5),
-            yaxis="y2"
-        ))
-
-        if trades:
-            entry_y_a = [df["A"].loc[d] if d in df.index else None for d in entry_dates]
-            exit_y_a  = [df["A"].loc[d] if d in df.index else None for d in exit_dates]
-
+            # Graphe 1 — double axe Y avec prix réels
+            color_a = "#1B4F8A"   # bleu foncé
+            color_b = "#5BA4CF"   # bleu clair
+            fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
-                yaxis="y1",
-                text=trade_nums, textposition="top center",
-                textfont=dict(size=9, color="#555"),
-                marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="%{customdata}<extra></extra>",
-                customdata=entry_hover,
+                x=df.index, y=df["A"], name=name_a,
+                line=dict(color=color_a, width=1.5),
+                yaxis="y1"
             ))
             fig.add_trace(go.Scatter(
-                x=exit_dates, y=exit_y_a, mode="markers+text", name="Sortie",
-                yaxis="y1",
-                text=trade_nums, textposition="bottom center",
-                textfont=dict(size=9, color="#555"),
-                marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="%{customdata}<extra></extra>",
-                customdata=exit_hover,
+                x=df.index, y=df["B"], name=name_b,
+                line=dict(color=color_b, width=1.5),
+                yaxis="y2"
             ))
 
-        fig.update_layout(
-            title=dict(text=f"Évolution des prix — {name_a} · {name_b}", font=dict(size=12)),
-            height=260, margin=dict(t=40, b=28, l=48, r=48),
-            plot_bgcolor="#fff", paper_bgcolor="#fff",
-            showlegend=False,
-            xaxis=dict(range=[x_min, x_max], showgrid=False, tickfont=dict(size=10)),
-            yaxis=dict(showgrid=False, tickfont=dict(color=color_a, size=9), title=None),
-            yaxis2=dict(
-                overlaying="y", side="right",
-                showgrid=False,
-                tickfont=dict(color=color_b, size=9),
-                title=None,
-            ),
-            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                         line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
-        )
-        st.plotly_chart(fig, use_container_width=True)
+            if trades:
+                entry_y_a = [df["A"].loc[d] if d in df.index else None for d in entry_dates]
+                exit_y_a  = [df["A"].loc[d] if d in df.index else None for d in exit_dates]
 
-        # Graphe 2 — z-score
-        fig2 = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
+                    yaxis="y1",
+                    text=trade_nums, textposition="top center",
+                    textfont=dict(size=9, color="#555"),
+                    marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=entry_hover,
+                ))
+                fig.add_trace(go.Scatter(
+                    x=exit_dates, y=exit_y_a, mode="markers+text", name="Sortie",
+                    yaxis="y1",
+                    text=trade_nums, textposition="bottom center",
+                    textfont=dict(size=9, color="#555"),
+                    marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=exit_hover,
+                ))
 
-        # Courbe z-score
-        fig2.add_trace(go.Scatter(
-            x=z_score_series.index, y=z_score_series,
-            line=dict(color="#378ADD", width=1.5),
-            fill="tozeroy", fillcolor="rgba(55,138,221,0.05)",
-            showlegend=False
-        ))
+            fig.update_layout(
+                title=dict(text=f"Évolution des prix — {name_a} · {name_b}", font=dict(size=12)),
+                height=260, margin=dict(t=40, b=28, l=48, r=48),
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                showlegend=False,
+                xaxis=dict(range=[x_min, x_max], showgrid=False, tickfont=dict(size=10)),
+                yaxis=dict(showgrid=False, tickfont=dict(color=color_a, size=9), title=None),
+                yaxis2=dict(
+                    overlaying="y", side="right",
+                    showgrid=False,
+                    tickfont=dict(color=color_b, size=9),
+                    title=None,
+                ),
+                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                             line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
-        # Lignes horizontales seuils
-        fig2.add_hline(y=entry_z,  line_color="rgba(220,50,50,0.7)",  line_width=1.5)
-        fig2.add_hline(y=-entry_z, line_color="rgba(220,50,50,0.7)",  line_width=1.5)
-        fig2.add_hline(y=0,        line_color="rgba(180,180,180,0.6)", line_width=1, line_dash="dot")
+            # Graphe 2 — z-score
+            fig2 = go.Figure()
 
-        if trades:
-            entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
-            exit_z_vals  = [z_score_series.loc[d] if d in z_score_series.index else None for d in exit_dates]
-
+            # Courbe z-score
             fig2.add_trace(go.Scatter(
-                x=entry_dates, y=entry_z_vals, mode="markers+text", name="Entrée",
-                text=trade_nums, textposition="top center",
-                textfont=dict(size=9, color="#555"),
-                marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="%{customdata}<extra></extra>",
-                customdata=entry_hover,
-            ))
-            fig2.add_trace(go.Scatter(
-                x=exit_dates, y=exit_z_vals, mode="markers+text", name="Sortie",
-                text=trade_nums, textposition="bottom center",
-                textfont=dict(size=9, color="#555"),
-                marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
-                hovertemplate="%{customdata}<extra></extra>",
-                customdata=exit_hover,
+                x=z_score_series.index, y=z_score_series,
+                line=dict(color="#378ADD", width=1.5),
+                fill="tozeroy", fillcolor="rgba(55,138,221,0.05)",
+                showlegend=False
             ))
 
-        z_abs_max = max(abs(z_score_series.max()), abs(z_score_series.min())) * 1.15
-        fig2.update_layout(
-            title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-            height=260, margin=dict(t=40, b=28, l=48, r=24),
-            plot_bgcolor="#fff", paper_bgcolor="#fff",
-            showlegend=False,
-            xaxis=dict(range=[x_min, x_max]),
-            yaxis=dict(range=[-z_abs_max, z_abs_max]),
-            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                         line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
-        )
-        fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
-        fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
-        st.plotly_chart(fig2, use_container_width=True)
+            # Lignes horizontales seuils
+            fig2.add_hline(y=entry_z,  line_color="rgba(220,50,50,0.7)",  line_width=1.5)
+            fig2.add_hline(y=-entry_z, line_color="rgba(220,50,50,0.7)",  line_width=1.5)
+            fig2.add_hline(y=0,        line_color="rgba(180,180,180,0.6)", line_width=1, line_dash="dot")
 
-# ══ MATRICE WIN RATE ═══════════════════════════════════════════════════════════
-st.divider()
-st.markdown("#### Matrice Win Rate")
-st.caption("Win rate de chaque paire avec les paramètres backtest actuels. Calculé au clic.")
+            if trades:
+                entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
+                exit_z_vals  = [z_score_series.loc[d] if d in z_score_series.index else None for d in exit_dates]
 
-if st.button("Calculer la matrice", use_container_width=False):
-    all_names = list(CRYPTOS.keys())
-    n = len(all_names)
+                fig2.add_trace(go.Scatter(
+                    x=entry_dates, y=entry_z_vals, mode="markers+text", name="Entrée",
+                    text=trade_nums, textposition="top center",
+                    textfont=dict(size=9, color="#555"),
+                    marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=entry_hover,
+                ))
+                fig2.add_trace(go.Scatter(
+                    x=exit_dates, y=exit_z_vals, mode="markers+text", name="Sortie",
+                    text=trade_nums, textposition="bottom center",
+                    textfont=dict(size=9, color="#555"),
+                    marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=exit_hover,
+                ))
 
-    bar = st.progress(0, text="Calcul en cours...")
-    price_cache = {}
-    for name in all_names:
-        price_cache[name], _ = fetch_prices(CRYPTOS[name])
+            z_abs_max = max(abs(z_score_series.max()), abs(z_score_series.min())) * 1.15
+            fig2.update_layout(
+                title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
+                height=260, margin=dict(t=40, b=28, l=48, r=24),
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                showlegend=False,
+                xaxis=dict(range=[x_min, x_max]),
+                yaxis=dict(range=[-z_abs_max, z_abs_max]),
+                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                             line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
+            )
+            fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
+            fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
+            st.plotly_chart(fig2, use_container_width=True)
 
-    wr_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
-    total_pairs = n * (n - 1) // 2
-    done = 0
-    for i, a in enumerate(all_names):
-        for j, b in enumerate(all_names):
-            if i >= j:
-                wr_matrix.loc[a, b] = None
-                continue
-            done += 1
-            bar.progress(done / total_pairs, text=f"{a} / {b}…")
-            sa = price_cache.get(a)
-            sb = price_cache.get(b)
-            if sa is None or sb is None:
-                wr_matrix.loc[a, b] = None
-                wr_matrix.loc[b, a] = None
-                continue
-            m_pair = compute_metrics(sa, sb, a, b)
-            if m_pair is None:
-                wr_matrix.loc[a, b] = None
-                wr_matrix.loc[b, a] = None
-                continue
+with tab_wr:
+    st.caption("Win rate de chaque paire calculé avec les paramètres backtest actuels.")
 
-            z_s = m_pair["z_score"].dropna()
-            df_p = m_pair["df"]
-            beta_p = m_pair["Hedge Ratio (β)"]
-            pa_last = float(sa.iloc[-1])
-            pb_last = float(sb.iloc[-1])
-            ratio_p = abs(beta_p * pb_last / pa_last)
-            alloc_a_p = 1000 / (1 + ratio_p)
-            alloc_b_p = 1000 - alloc_a_p
+    if st.button("Calculer la matrice", use_container_width=False):
+        all_names = list(CRYPTOS.keys())
+        n = len(all_names)
 
-            trades_p, pos_p = [], None
-            for date, z_val in z_s.items():
-                if date not in df_p.index:
+        bar = st.progress(0, text="Calcul en cours...")
+        price_cache = {}
+        for name in all_names:
+            price_cache[name], _ = fetch_prices(CRYPTOS[name])
+
+        wr_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
+        total_pairs = n * (n - 1) // 2
+        done = 0
+        for i, a in enumerate(all_names):
+            for j, b in enumerate(all_names):
+                if i >= j:
+                    wr_matrix.loc[a, b] = None
                     continue
-                pa = df_p.loc[date, "A"]
-                pb = df_p.loc[date, "B"]
-                if pos_p is None:
-                    if z_val > entry_z:
-                        pos_p = {"dir": "short_a", "ed": date, "epa": pa, "epb": pb,
-                                 "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
-                    elif z_val < -entry_z:
-                        pos_p = {"dir": "long_a", "ed": date, "epa": pa, "epb": pb,
-                                 "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
+                done += 1
+                bar.progress(done / total_pairs, text=f"{a} / {b}…")
+                sa = price_cache.get(a)
+                sb = price_cache.get(b)
+                if sa is None or sb is None:
+                    wr_matrix.loc[a, b] = None
+                    wr_matrix.loc[b, a] = None
+                    continue
+                m_pair = compute_metrics(sa, sb, a, b)
+                if m_pair is None:
+                    wr_matrix.loc[a, b] = None
+                    wr_matrix.loc[b, a] = None
+                    continue
+
+                z_s = m_pair["z_score"].dropna()
+                df_p = m_pair["df"]
+                beta_p = m_pair["Hedge Ratio (β)"]
+                pa_last = float(sa.iloc[-1])
+                pb_last = float(sb.iloc[-1])
+                ratio_p = abs(beta_p * pb_last / pa_last)
+                alloc_a_p = 1000 / (1 + ratio_p)
+                alloc_b_p = 1000 - alloc_a_p
+
+                trades_p, pos_p = [], None
+                for date, z_val in z_s.items():
+                    if date not in df_p.index:
+                        continue
+                    pa = df_p.loc[date, "A"]
+                    pb = df_p.loc[date, "B"]
+                    if pos_p is None:
+                        if z_val > entry_z:
+                            pos_p = {"dir": "short_a", "ed": date, "epa": pa, "epb": pb,
+                                     "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
+                        elif z_val < -entry_z:
+                            pos_p = {"dir": "long_a", "ed": date, "epa": pa, "epb": pb,
+                                     "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
+                    else:
+                        ex_n = (pos_p["dir"] == "short_a" and z_val < exit_z) or \
+                               (pos_p["dir"] == "long_a"  and z_val > -exit_z)
+                        ex_s = abs(z_val) > stop_z
+                        ex_d = (date - pos_p["ed"]).days >= max_duration
+                        if ex_n or ex_s or ex_d:
+                            if pos_p["dir"] == "short_a":
+                                pnl = (pos_p["epa"] - pa) * pos_p["ua"] + (pb - pos_p["epb"]) * pos_p["ub"]
+                            else:
+                                pnl = (pa - pos_p["epa"]) * pos_p["ua"] + (pos_p["epb"] - pb) * pos_p["ub"]
+                            trades_p.append(pnl)
+                            pos_p = None
+
+                if not trades_p:
+                    wr_matrix.loc[a, b] = None
+                    wr_matrix.loc[b, a] = None
                 else:
-                    ex_n = (pos_p["dir"] == "short_a" and z_val < exit_z) or \
-                           (pos_p["dir"] == "long_a"  and z_val > -exit_z)
-                    ex_s = abs(z_val) > stop_z
-                    ex_d = (date - pos_p["ed"]).days >= max_duration
-                    if ex_n or ex_s or ex_d:
-                        if pos_p["dir"] == "short_a":
-                            pnl = (pos_p["epa"] - pa) * pos_p["ua"] + (pb - pos_p["epb"]) * pos_p["ub"]
-                        else:
-                            pnl = (pa - pos_p["epa"]) * pos_p["ua"] + (pos_p["epb"] - pb) * pos_p["ub"]
-                        trades_p.append(pnl)
-                        pos_p = None
+                    wr = sum(1 for p in trades_p if p > 0) / len(trades_p)
+                    wr_matrix.loc[a, b] = wr
+                    wr_matrix.loc[b, a] = wr
 
-            if not trades_p:
-                wr_matrix.loc[a, b] = None
-                wr_matrix.loc[b, a] = None
-            else:
-                wr = sum(1 for p in trades_p if p > 0) / len(trades_p)
-                wr_matrix.loc[a, b] = wr
-                wr_matrix.loc[b, a] = wr
+        bar.empty()
+        # Stocker en session_state pour persistance
+        st.session_state["wr_matrix"] = wr_matrix.to_dict()
+        st.session_state["wr_labels"] = all_names
 
-    bar.empty()
-    # Stocker en session_state pour persistance
-    st.session_state["wr_matrix"] = wr_matrix.to_dict()
-    st.session_state["wr_labels"] = all_names
+    # Affichage — depuis session_state si disponible
+    if "wr_matrix" in st.session_state:
+        labels = st.session_state["wr_labels"]
+        wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
-# Affichage — depuis session_state si disponible
-if "wr_matrix" in st.session_state:
-    labels = st.session_state["wr_labels"]
-    wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
+        z_vals, text_vals, hover_vals = [], [], []
+        for a in labels:
+            row_z, row_t, row_h = [], [], []
+            for b in labels:
+                val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
+                if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
+                    row_z.append(None)
+                    row_t.append("")
+                    row_h.append("—")
+                else:
+                    row_z.append(float(val))
+                    row_t.append(f"{float(val):.0%}")
+                    row_h.append(f"{a} / {b}<br>Win rate : {float(val):.0%}")
+            z_vals.append(row_z)
+            text_vals.append(row_t)
+            hover_vals.append(row_h)
 
-    z_vals, text_vals, hover_vals = [], [], []
-    for a in labels:
-        row_z, row_t, row_h = [], [], []
-        for b in labels:
-            val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
-            if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
-                row_z.append(None)
-                row_t.append("")
-                row_h.append("—")
-            else:
-                row_z.append(float(val))
-                row_t.append(f"{float(val):.0%}")
-                row_h.append(f"{a} / {b}<br>Win rate : {float(val):.0%}")
-        z_vals.append(row_z)
-        text_vals.append(row_t)
-        hover_vals.append(row_h)
-
-    n = len(labels)
-    fig_wr = go.Figure(go.Heatmap(
-        z=z_vals, x=labels, y=labels,
-        text=text_vals, hovertext=hover_vals,
-        hovertemplate="%{hovertext}<extra></extra>",
-        texttemplate="%{text}",
-        colorscale=[
-            [0.0, "#fdf0f0"], [0.4, "#fef3e2"],
-            [0.6, "#e8f7f1"], [1.0, "#0F6E56"],
-        ],
-        zmin=0, zmax=1, showscale=True,
-        colorbar=dict(tickformat=".0%", thickness=12, len=0.8,
-                      tickfont=dict(size=9), title=dict(text="Win rate", font=dict(size=9)))
-    ))
-    fig_wr.update_layout(
-        height=max(300, n * 36 + 80),
-        margin=dict(t=20, b=20, l=120, r=60),
-        plot_bgcolor="#fff", paper_bgcolor="#fff",
-        xaxis=dict(tickfont=dict(size=10), side="top"),
-        yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
-    )
-    st.plotly_chart(fig_wr, use_container_width=True)
+        n = len(labels)
+        fig_wr = go.Figure(go.Heatmap(
+            z=z_vals, x=labels, y=labels,
+            text=text_vals, hovertext=hover_vals,
+            hovertemplate="%{hovertext}<extra></extra>",
+            texttemplate="%{text}",
+            colorscale=[
+                [0.0, "#fdf0f0"], [0.4, "#fef3e2"],
+                [0.6, "#e8f7f1"], [1.0, "#0F6E56"],
+            ],
+            zmin=0, zmax=1, showscale=False,
+        ))
+        fig_wr.update_layout(
+            height=max(300, n * 36 + 80),
+            margin=dict(t=20, b=20, l=120, r=60),
+            plot_bgcolor="#fff", paper_bgcolor="#fff",
+            xaxis=dict(tickfont=dict(size=10), side="top"),
+            yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
+        )
+        st.plotly_chart(fig_wr, use_container_width=True)
