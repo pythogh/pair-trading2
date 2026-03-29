@@ -529,10 +529,12 @@ else:
             ))
 
             fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
+            pnl_abs_max = max(abs(min(pnl_values)), abs(max(pnl_values))) * 1.15
             fig_pnl.update_layout(
                 title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
-                height=220, margin=dict(t=40, b=24, l=48, r=24),
+                height=260, margin=dict(t=40, b=24, l=48, r=24),
                 plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
+                yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
                 shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                              line=dict(color="#ccc", width=1, dash="dash"))]
             )
@@ -641,11 +643,21 @@ else:
                 customdata=exit_hover,
             ))
 
+        price_a_norm = df["A"] / df["A"].iloc[0]
+        price_b_norm = df["B"] / df["B"].iloc[0]
+        price_center = (price_a_norm.mean() + price_b_norm.mean()) / 2
+        price_abs_max = max(
+            abs(price_a_norm.max() - price_center),
+            abs(price_a_norm.min() - price_center),
+            abs(price_b_norm.max() - price_center),
+            abs(price_b_norm.min() - price_center),
+        ) * 1.15
         fig.update_layout(
             title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-            height=280, margin=dict(t=40, b=24, l=48, r=24),
+            height=260, margin=dict(t=40, b=24, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
+            yaxis=dict(range=[price_center - price_abs_max, price_center + price_abs_max]),
             shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                          line=dict(color="#ccc", width=1, dash="dash"))]
         )
@@ -655,12 +667,6 @@ else:
 
         # Graphe 2 — z-score
         fig2 = go.Figure()
-
-        # Zones de surbrillance signal (au-dessus du stop-loss uniquement)
-        fig2.add_hrect(y0=stop_z, y1=z_score_series.max() * 1.1,
-                       fillcolor="rgba(220,50,50,0.1)", line_width=0)
-        fig2.add_hrect(y0=z_score_series.min() * 1.1, y1=-stop_z,
-                       fillcolor="rgba(220,50,50,0.1)", line_width=0)
 
         # Courbe z-score
         fig2.add_trace(go.Scatter(
@@ -705,11 +711,13 @@ else:
                 customdata=exit_hover,
             ))
 
+        z_abs_max = max(abs(z_score_series.max()), abs(z_score_series.min())) * 1.15
         fig2.update_layout(
             title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-            height=280, margin=dict(t=40, b=24, l=48, r=24),
+            height=260, margin=dict(t=40, b=24, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
+            yaxis=dict(range=[-z_abs_max, z_abs_max]),
             shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                          line=dict(color="#ccc", width=1, dash="dash"))]
         )
