@@ -911,6 +911,7 @@ with tab_wr:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Affichage — depuis session_state si disponible
     if "wr_matrix" in st.session_state:
+        labels = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
         # Filtre sur le Win Rate — réduit la matrice
