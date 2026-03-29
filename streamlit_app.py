@@ -178,12 +178,13 @@ if "token_logos" not in st.session_state:
 
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
-def fetch_all_logos(slugs: tuple) -> dict:
+def fetch_all_logos(slugs: tuple, api_key: str) -> dict:
     """Récupère tous les logos en un seul appel batch CoinMarketCap."""
     import requests
     logos = {s: "" for s in slugs}
+    if not api_key:
+        return logos
     try:
-        api_key = st.secrets.get("API_CMC", "")
         r = requests.get(
             "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info",
             params={"slug": ",".join(slugs), "aux": "logo"},
@@ -195,14 +196,18 @@ def fetch_all_logos(slugs: tuple) -> dict:
                 slug = coin.get("slug", "")
                 if slug in logos:
                     logos[slug] = coin.get("logo", "")
-    except Exception:
-        pass
+        else:
+            # Stocker le code d'erreur pour debug
+            logos["__error__"] = f"HTTP {r.status_code}: {r.text[:200]}"
+    except Exception as e:
+        logos["__error__"] = str(e)
     return logos
 
 if not st.session_state["token_logos"]:
     slugs = tuple(CRYPTOS.values())
+    _cmc_key = st.secrets.get("API_CMC", "") if hasattr(st.secrets, "get") else st.secrets.get("API_CMC", "")
     with st.spinner("Chargement des logos…"):
-        st.session_state["token_logos"] = fetch_all_logos(slugs)
+        st.session_state["token_logos"] = fetch_all_logos(slugs, _cmc_key)
 
 def get_logo(name: str) -> str:
     slug = CRYPTOS.get(name, "")
@@ -833,63 +838,89 @@ with tab_wr:
         labels = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
-        # Filtre sur le Win Rate
+        # Filtre sur le Win Rate — réduit la matrice
         wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 75, 5, format="%d%%")
 
-        z_vals, text_vals, hover_vals = [], [], []
+        # Garder seulement les tokens qui ont au moins une paire au-dessus du seuil
+        threshold = wr_min / 100
+        tokens_to_keep = set()
         for a in labels:
-            row_z, row_t, row_h = [], [], []
             for b in labels:
+                if a == b:
+                    continue
                 val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
-                if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
-                    row_z.append(None)
-                    row_t.append("")
-                    row_h.append("—")
-                else:
-                    v = float(val)
-                    # Masquer les cellules sous le seuil
-                    if v * 100 < wr_min:
+                if val is not None and not (isinstance(val, float) and pd.isna(val)):
+                    if float(val) >= threshold:
+                        tokens_to_keep.add(a)
+                        tokens_to_keep.add(b)
+
+        filtered_labels = [l for l in labels if l in tokens_to_keep]
+
+        if not filtered_labels:
+            st.info("Aucune paire ne dépasse ce seuil.")
+        else:
+            z_vals, text_vals, hover_vals = [], [], []
+            for a in filtered_labels:
+                row_z, row_t, row_h = [], [], []
+                for b in filtered_labels:
+                    val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
+                    if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
                         row_z.append(None)
                         row_t.append("")
-                        row_h.append(f"{a} / {b}<br>Win rate : {v:.0%} (filtré)")
+                        row_h.append("—")
                     else:
-                        row_z.append(v)
-                        row_t.append(f"{v:.0%}")
+                        v = float(val)
+                        row_z.append(v if v >= threshold else None)
+                        row_t.append(f"{v:.0%}" if v >= threshold else "")
                         row_h.append(f"{a} / {b}<br>Win rate : {v:.0%}")
-            z_vals.append(row_z)
-            text_vals.append(row_t)
-            hover_vals.append(row_h)
+                z_vals.append(row_z)
+                text_vals.append(row_t)
+                hover_vals.append(row_h)
 
-        n = len(labels)
-        fig_wr = go.Figure(go.Heatmap(
-            z=z_vals, x=labels, y=labels,
-            text=text_vals, hovertext=hover_vals,
-            hovertemplate="%{hovertext}<extra></extra>",
-            texttemplate="%{text}",
-            colorscale=[
-                [0.0, "#fdf0f0"], [0.4, "#fef3e2"],
-                [0.6, "#e8f7f1"], [1.0, "#0F6E56"],
-            ],
-            zmin=0, zmax=1, showscale=False,
-        ))
-        fig_wr.update_layout(
-            height=max(300, n * 36 + 80),
-            margin=dict(t=20, b=20, l=120, r=60),
-            plot_bgcolor="#fff", paper_bgcolor="#fff",
-            xaxis=dict(tickfont=dict(size=10), side="top"),
-            yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
-        )
-        st.plotly_chart(fig_wr, use_container_width=True)
+            n = len(filtered_labels)
+            fig_wr = go.Figure(go.Heatmap(
+                z=z_vals, x=filtered_labels, y=filtered_labels,
+                text=text_vals, hovertext=hover_vals,
+                hovertemplate="%{hovertext}<extra></extra>",
+                texttemplate="%{text}",
+                colorscale=[
+                    [0.0, "#fdf0f0"], [0.4, "#fef3e2"],
+                    [0.6, "#e8f7f1"], [1.0, "#0F6E56"],
+                ],
+                zmin=0, zmax=1, showscale=False,
+            ))
+            fig_wr.update_layout(
+                height=max(300, n * 40 + 80),
+                margin=dict(t=20, b=20, l=120, r=60),
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                xaxis=dict(tickfont=dict(size=10), side="top"),
+                yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
+            )
+            st.plotly_chart(fig_wr, use_container_width=True)
 
 with tab_logo:
-    st.caption("Test de récupération des logos CoinGecko.")
-    logos = st.session_state.get("token_logos", {})
+    st.caption("Test de récupération des logos CoinMarketCap.")
+
+    # Debug : afficher l'erreur si présente
+    logos_data = st.session_state.get("token_logos", {})
+    if "__error__" in logos_data:
+        st.error(f"Erreur API : {logos_data['__error__']}")
+    
+    _key_present = "API_CMC" in st.secrets
+    st.markdown(f"Clé API_CMC dans les secrets : **{'✅ trouvée' if _key_present else '❌ non trouvée'}**")
+    st.markdown(f"Logos récupérés : **{sum(1 for v in logos_data.values() if v and not v.startswith('__'))}** / {len(CRYPTOS)}")
+
+    if st.button("🔄 Recharger les logos"):
+        st.session_state["token_logos"] = {}
+        st.rerun()
+
     rows = []
     for name, slug in CRYPTOS.items():
-        rows.append({"Logo": logos.get(slug, ""), "Token": name, "Slug": slug})
+        url = logos_data.get(slug, "")
+        rows.append({"Logo": url, "Token": name, "Slug": slug, "URL": url or "—"})
     df_logos = pd.DataFrame(rows)
     st.dataframe(
-        df_logos,
+        df_logos[["Logo", "Token", "Slug"]],
         use_container_width=True,
         hide_index=True,
         column_config={
