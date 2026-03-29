@@ -623,8 +623,8 @@ with tab_bt:
                 # Tableau détail trades
                 with st.expander(f"Détail des {n_trades} trades", expanded=True):
                     st.markdown(
-                        f"<p style='font-size:10px;color:#666;margin:0 0 10px'>"
-                        f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
+                        f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
+                        f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} - "
                         f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
                         f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
                         unsafe_allow_html=True
