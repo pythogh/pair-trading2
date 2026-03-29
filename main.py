@@ -346,7 +346,7 @@ default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a
 default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
 # Ligne 1 : paires + bouton
-r1c1, r1c2, r1c3, _ = st.columns([1.0, 1.0, 0.4, 2.6])
+r1c1, r1c2, r1c3, r1c4, _ = st.columns([1.0, 1.0, 0.4, 0.4, 2.2])
 with r1c1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
 with r1c2:
@@ -354,6 +354,12 @@ with r1c2:
 with r1c3:
     st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
     analyse = st.button("Analyser")
+    st.markdown("</div>", unsafe_allow_html=True)
+with r1c4:
+    st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+    if st.button("↺", help="Réinitialiser les résultats"):
+        st.session_state.pop("bt_data", None)
+        st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 capital = 1000
