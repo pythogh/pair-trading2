@@ -27,7 +27,7 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
 [data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
-button[data-baseweb="tab"] { font-size: 12px !important; }
+button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !important; margin-right: 4px !important; }
 .stApp { background-color: #ffffff !important; }
 /* Bordure pointillés + espacement uniforme sur les graphes Plotly */
 [data-testid="stPlotlyChart"],
@@ -179,31 +179,26 @@ if "token_logos" not in st.session_state:
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_all_logos(slugs: tuple) -> dict:
-    """Récupère les URLs des logos via CoinGecko avec clé API."""
-    import requests, time
-    logos = {}
-    headers = {"x-cg-demo-api-key": API_KEY}
-    for slug in slugs:
-        for attempt in range(3):
-            try:
-                r = requests.get(
-                    f"https://api.coingecko.com/api/v3/coins/{slug}",
-                    params={"localization": "false", "market_data": "false",
-                            "community_data": "false", "developer_data": "false",
-                            "tickers": "false"},
-                    headers=headers,
-                    timeout=8
-                )
-                if r.status_code == 200:
-                    logos[slug] = r.json().get("image", {}).get("small", "")
-                    break
-                elif r.status_code == 429:
-                    time.sleep(3)  # rate limit — retry
-                else:
-                    break
-            except Exception:
-                break
-        logos.setdefault(slug, "")
+    """Récupère tous les logos en un seul appel batch CoinGecko."""
+    import requests
+    logos = {s: "" for s in slugs}
+    try:
+        r = requests.get(
+            "https://api.coingecko.com/api/v3/coins/markets",
+            params={
+                "vs_currency": "usd",
+                "ids": ",".join(slugs),
+                "per_page": 250,
+                "page": 1,
+            },
+            headers={"x-cg-demo-api-key": API_KEY},
+            timeout=15,
+        )
+        if r.status_code == 200:
+            for coin in r.json():
+                logos[coin["id"]] = coin.get("image", "")
+    except Exception:
+        pass
     return logos
 
 if not st.session_state["token_logos"] or any(
@@ -380,7 +375,6 @@ else:
         )
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
-st.divider()
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
@@ -844,7 +838,7 @@ with tab_wr:
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
         # Filtre sur le Win Rate
-        wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 0, 5, format="%d%%")
+        wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 75, 5, format="%d%%")
 
         z_vals, text_vals, hover_vals = [], [], []
         for a in labels:
