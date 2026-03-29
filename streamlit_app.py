@@ -520,27 +520,32 @@ else:
                     fig_pnl.add_trace(go.Scatter(x=[x_cross, x_vals[i+1]], y=[0, y1],
                         mode="lines", line=dict(color=c2, width=2), showlegend=False))
 
-            # Marqueurs colorés par trade
+            # Marqueurs avec valeur P&L affichée
+            marker_colors = ["#1D9E75" if p > 0 else "#E24B4A" for p in pnl_values]
+            marker_labels = [f"+{p:.0f}$" if p > 0 else f"{p:.0f}$" for p in pnl_values]
             fig_pnl.add_trace(go.Scatter(
-                x=x_vals, y=pnl_values, mode="markers",
-                marker=dict(size=7, color=["#1D9E75" if p > 0 else "#E24B4A" for p in pnl_values]),
+                x=x_vals, y=pnl_values, mode="markers+text",
+                text=marker_labels,
+                textposition=["top center" if p >= 0 else "bottom center" for p in pnl_values],
+                textfont=dict(size=9, color=marker_colors),
+                marker=dict(size=7, color=marker_colors),
                 showlegend=False,
                 hovertemplate="Trade #%{x}<br>P&L cumulé : %{y:.0f}$<extra></extra>"
             ))
 
             fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
-            pnl_abs_max = max(abs(min(pnl_values)), abs(max(pnl_values))) * 1.15
+            pnl_abs_max = max(abs(min(pnl_values)), abs(max(pnl_values))) * 1.25
             fig_pnl.update_layout(
                 title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
                 height=260, margin=dict(t=40, b=24, l=48, r=24),
                 plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
                 yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
-                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                             line=dict(color="#ccc", width=1, dash="dash"))]
             )
-            fig_pnl.update_xaxes(title_text="Trade #", showgrid=False, tickfont=dict(size=10))
+            fig_pnl.update_xaxes(title_text="", showgrid=False, tickfont=dict(size=10))
             fig_pnl.update_yaxes(showgrid=False, tickfont=dict(size=10))
+            st.markdown("<div style='border:1px dashed #ccc;border-radius:8px;padding:4px 8px;'>", unsafe_allow_html=True)
             st.plotly_chart(fig_pnl, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
             with st.expander(f"Détail des {n_trades} trades"):
                 st.markdown(
@@ -658,12 +663,12 @@ else:
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
             yaxis=dict(range=[price_center - price_abs_max, price_center + price_abs_max]),
-            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                         line=dict(color="#ccc", width=1, dash="dash"))]
         )
         fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig.update_yaxes(showgrid=False, tickfont=dict(size=10))
+        st.markdown("<div style='border:1px dashed #ccc;border-radius:8px;padding:4px 8px;'>", unsafe_allow_html=True)
         st.plotly_chart(fig, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
         # Graphe 2 — z-score
         fig2 = go.Figure()
@@ -718,9 +723,9 @@ else:
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
             yaxis=dict(range=[-z_abs_max, z_abs_max]),
-            shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                         line=dict(color="#ccc", width=1, dash="dash"))]
         )
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
+        st.markdown("<div style='border:1px dashed #ccc;border-radius:8px;padding:4px 8px;'>", unsafe_allow_html=True)
         st.plotly_chart(fig2, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
