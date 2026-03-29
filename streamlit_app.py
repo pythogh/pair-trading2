@@ -237,31 +237,15 @@ if not st.session_state["token_logos"]:
     with st.spinner("Chargement des logos…"):
         st.session_state["token_logos"] = fetch_all_logos(tuple(CRYPTOS.keys()), _cmc_key)
 
-@st.cache_data(ttl=86400, show_spinner=False)
-def make_circular_logo(url: str) -> str:
-    """Télécharge une image et la rend circulaire, retourne une data URI base64."""
-    if not url or url.startswith("__"):
-        return ""
-    try:
-        import requests, io, base64
-        from PIL import Image, ImageDraw
-        r = requests.get(url, timeout=8)
-        if r.status_code != 200:
-            return url
-        img = Image.open(io.BytesIO(r.content)).convert("RGBA").resize((64, 64))
-        mask = Image.new("L", (64, 64), 0)
-        ImageDraw.Draw(mask).ellipse((0, 0, 64, 64), fill=255)
-        img.putalpha(mask)
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        b64 = base64.b64encode(buf.getvalue()).decode()
-        return f"data:image/png;base64,{b64}"
-    except Exception:
-        return url
-
 def get_logo(name: str) -> str:
-    url = st.session_state["token_logos"].get(name, "")
-    return make_circular_logo(url) if url else ""
+    return st.session_state["token_logos"].get(name, "")
+
+def logo_html(name: str, size: int = 18) -> str:
+    url = get_logo(name)
+    if not url:
+        return f"<span style='display:inline-block;width:{size}px;height:{size}px;border-radius:50%;background:#e0e0e0;'></span>"
+    return (f"<img src='{url}' style='width:{size}px;height:{size}px;"
+            f"border-radius:50%;object-fit:cover;vertical-align:middle;'>")
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 _stale = any(
@@ -964,16 +948,18 @@ with tab_logo:
         st.session_state["token_logos"] = {}
         st.rerun()
 
-    rows = []
-    for name, slug in CRYPTOS.items():
-        url = logos_data.get(name, "")  # stocké par nom, pas par slug
-        rows.append({"Logo": url, "Token": name, "Slug": slug})
-    df_logos = pd.DataFrame(rows)
-    st.dataframe(
-        df_logos[["Logo", "Token", "Slug"]],
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Logo": st.column_config.ImageColumn("Logo", width="small"),
-        }
+    rows_html = ""
+    for name in CRYPTOS.keys():
+        url = get_logo(name)
+        img = logo_html(name, 20)
+        status = "✅" if url else "❌"
+        rows_html += f"<tr><td style='padding:4px 8px'>{img}</td><td style='padding:4px 8px;font-size:12px'>{name}</td><td style='padding:4px 8px;font-size:11px;color:#888'>{status}</td></tr>"
+
+    st.markdown(
+        f"<table style='border-collapse:collapse'><thead><tr>"
+        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Logo</th>"
+        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Token</th>"
+        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>OK</th>"
+        f"</tr></thead><tbody>{rows_html}</tbody></table>",
+        unsafe_allow_html=True
     )
