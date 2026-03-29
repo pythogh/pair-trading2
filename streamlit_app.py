@@ -172,6 +172,36 @@ if "prefill_b" not in st.session_state:
     st.session_state.prefill_b = None
 if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
+if "token_logos" not in st.session_state:
+    st.session_state["token_logos"] = {}
+
+# ─── LOGOS ─────────────────────────────────────────────────────────────────────
+@st.cache_data(ttl=86400, show_spinner=False)
+def fetch_all_logos(slugs: tuple) -> dict:
+    """Récupère les URLs des logos pour une liste de slugs CoinGecko."""
+    import requests
+    logos = {}
+    for slug in slugs:
+        try:
+            r = requests.get(
+                f"https://api.coingecko.com/api/v3/coins/{slug}",
+                params={"localization": "false", "market_data": "false",
+                        "community_data": "false", "developer_data": "false"},
+                timeout=6
+            )
+            if r.status_code == 200:
+                logos[slug] = r.json().get("image", {}).get("thumb", "")
+        except Exception:
+            logos[slug] = ""
+    return logos
+
+if not st.session_state["token_logos"]:
+    slugs = tuple(CRYPTOS.values())
+    st.session_state["token_logos"] = fetch_all_logos(slugs)
+
+def get_logo(name: str) -> str:
+    slug = CRYPTOS.get(name, "")
+    return st.session_state["token_logos"].get(slug, "")
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
 _stale = any(
@@ -341,7 +371,6 @@ st.divider()
 tab_bt, tab_wr = st.tabs(["🔍 Backtest", "🏆 Win Rate"])
 
 with tab_bt:
-    st.markdown("#### Backtest")
     st.caption("Capital par défaut : 1 000 $")
 
     keys = list(CRYPTOS.keys())
@@ -517,7 +546,7 @@ with tab_bt:
                 st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
-                with st.expander(f"Détail des {n_trades} trades"):
+                with st.expander(f"Détail des {n_trades} trades", expanded=True):
                     st.markdown(
                         f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                         f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
@@ -670,10 +699,13 @@ with tab_bt:
                 showlegend=False
             ))
 
-            # Lignes horizontales seuils
+            # Lignes horizontales seuils — entry_z paramétrable + z=2/-2 fixes
             fig2.add_hline(y=entry_z,  line_color="rgba(220,50,50,0.7)",  line_width=1.5)
             fig2.add_hline(y=-entry_z, line_color="rgba(220,50,50,0.7)",  line_width=1.5)
-            fig2.add_hline(y=0,        line_color="rgba(180,180,180,0.6)", line_width=1, line_dash="dot")
+            if entry_z != 2.0:
+                fig2.add_hline(y=2,  line_color="rgba(220,50,50,0.3)", line_width=1, line_dash="dot")
+                fig2.add_hline(y=-2, line_color="rgba(220,50,50,0.3)", line_width=1, line_dash="dot")
+            fig2.add_hline(y=0, line_color="rgba(180,180,180,0.6)", line_width=1, line_dash="dot")
 
             if trades:
                 entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
@@ -699,16 +731,16 @@ with tab_bt:
             z_abs_max = max(abs(z_score_series.max()), abs(z_score_series.min())) * 1.15
             fig2.update_layout(
                 title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-                height=260, margin=dict(t=40, b=28, l=48, r=24),
+                height=260, margin=dict(t=40, b=28, l=48, r=48),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 showlegend=False,
                 xaxis=dict(range=[x_min, x_max]),
-                yaxis=dict(range=[-z_abs_max, z_abs_max]),
+                yaxis=dict(range=[-z_abs_max, z_abs_max], mirror=True, tickfont=dict(size=10)),
                 shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                              line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
             )
             fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
-            fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
+            fig2.update_yaxes(showgrid=False)
             st.plotly_chart(fig2, use_container_width=True)
 
 with tab_wr:
