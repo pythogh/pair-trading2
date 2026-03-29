@@ -242,13 +242,10 @@ def get_display_name(name: str) -> str:
     return name
 
 def dn(name: str) -> str:
-    """Display name court : 'SYM · Name' ou label si pas encore chargé."""
+    """Display name propre depuis CMC, ou label par défaut."""
     meta = st.session_state.get("token_logos", {}).get(name, {})
-    sym  = meta.get("symbol", "")
     cmc_name = meta.get("name", "")
-    if sym and cmc_name:
-        return f"{sym} · {cmc_name}"
-    return name
+    return cmc_name if cmc_name else name
 
 def logo_html(name: str, size: int = 18) -> str:
     url = get_logo(name)
@@ -922,8 +919,10 @@ with tab_wr:
                 hover_vals.append(row_h)
 
             n = len(filtered_labels)
+            cell_size = max(40, min(60, 600 // n))
+
             fig_wr = go.Figure(go.Heatmap(
-                z=z_vals, x=filtered_labels, y=filtered_labels,
+                z=z_vals, x=list(range(n)), y=list(range(n)),
                 text=text_vals, hovertext=hover_vals,
                 hovertemplate="%{hovertext}<extra></extra>",
                 texttemplate="%{text}",
@@ -933,12 +932,41 @@ with tab_wr:
                 ],
                 zmin=0, zmax=1, showscale=False,
             ))
+
+            # Logos sur axe Y (gauche) et axe X (haut) via images Plotly
+            images = []
+            logo_size = min(28, cell_size - 10)
+            for i, lbl in enumerate(filtered_labels):
+                url = get_logo(lbl)
+                if url:
+                    # Axe Y
+                    images.append(dict(
+                        source=url, xref="paper", yref="y",
+                        x=-0.01, y=i, xanchor="right", yanchor="middle",
+                        sizex=0.06, sizey=0.8,
+                    ))
+                    # Axe X (haut)
+                    images.append(dict(
+                        source=url, xref="x", yref="paper",
+                        x=i, y=1.01, xanchor="center", yanchor="bottom",
+                        sizex=0.8, sizey=0.06,
+                    ))
+
             fig_wr.update_layout(
-                height=max(300, n * 40 + 80),
-                margin=dict(t=20, b=20, l=120, r=60),
+                height=max(300, n * cell_size + 80),
+                margin=dict(t=60, b=20, l=60, r=20),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=10), side="top"),
-                yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
+                images=images,
+                xaxis=dict(
+                    tickmode="array", tickvals=list(range(n)),
+                    ticktext=["" if get_logo(l) else dn(l) for l in filtered_labels],
+                    tickfont=dict(size=9), side="top", showgrid=False,
+                ),
+                yaxis=dict(
+                    tickmode="array", tickvals=list(range(n)),
+                    ticktext=["" if get_logo(l) else dn(l) for l in filtered_labels],
+                    tickfont=dict(size=9), autorange="reversed", showgrid=False,
+                ),
             )
             st.plotly_chart(fig_wr, use_container_width=True)
 
