@@ -34,7 +34,7 @@ button[data-baseweb="tab"] { font-size: 12px !important; }
     border: 1px dashed #ccc !important;
     border-radius: 8px !important;
     padding: 4px !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 24px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -453,9 +453,10 @@ else:
                         f"{name_a} sortie $": round(price_a, 4),
                         f"{name_b} entrée $": round(position["entry_price_b"], 4),
                         f"{name_b} sortie $": round(price_b, 4),
+                        f"P&L {name_a} ($)":  round(pnl_a, 2),
+                        f"P&L {name_b} ($)":  round(pnl_b, 2),
                         "P&L ($)":            round(pnl_total, 2),
                         "raison":             "Stop-loss" if exit_stop else "Retour à la moyenne",
-                        "résultat":           "✅ Gagnant" if pnl_total > 0 else "❌ Perdant",
                     })
                     position = None
 
@@ -565,11 +566,23 @@ else:
                         if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
                     except: pass
                     return [""] * len(row)
-                st.dataframe(
-                    df_display.style.apply(_row_color, axis=1),
-                    use_container_width=True,
-                    hide_index=True,
-                )
+
+                pnl_a_col = f"P&L {name_a} ($)"
+                pnl_b_col = f"P&L {name_b} ($)"
+
+                def _color_pnl_leg(val):
+                    try:
+                        v = float(val)
+                        if v > 0: return "color:#0F6E56;font-weight:500"
+                        if v < 0: return "color:#A32D2D;font-weight:500"
+                    except: pass
+                    return ""
+
+                styled = df_display.style.apply(_row_color, axis=1)
+                if pnl_a_col in df_display.columns:
+                    styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col])
+
+                st.dataframe(styled, use_container_width=True, hide_index=True)
 
             fig_pnl.update_layout(
                 title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
