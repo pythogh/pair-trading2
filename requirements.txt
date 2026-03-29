@@ -4,3 +4,4 @@ numpy
 requests
 statsmodels
 plotly
+Pillow
