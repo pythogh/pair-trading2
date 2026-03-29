@@ -941,8 +941,8 @@ with tab_logo:
 
     rows = []
     for name, slug in CRYPTOS.items():
-        url = logos_data.get(slug, "")
-        rows.append({"Logo": url, "Token": name, "Slug": slug, "URL": url or "—"})
+        url = logos_data.get(name, "")  # stocké par nom, pas par slug
+        rows.append({"Logo": url, "Token": name, "Slug": slug})
     df_logos = pd.DataFrame(rows)
     st.dataframe(
         df_logos[["Logo", "Token", "Slug"]],
