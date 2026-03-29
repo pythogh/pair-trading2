@@ -973,8 +973,8 @@ with tab_wr:
                 height=matrix_px,
                 margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=90),
-                yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=False),
+                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=True, tickangle=-90, gridcolor="#eee"),
+                yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=True, gridcolor="#eee"),
             )
             # Centrer via colonnes
             _, col_center, _ = st.columns([1, matrix_px // 10, 1])
