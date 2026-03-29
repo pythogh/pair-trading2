@@ -24,7 +24,7 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 .stButton > button:hover { background: #333 !important; }
 [data-testid="metric-container"] { background: #f7f6f3 !important; border-radius: 8px !important; padding: 10px 14px !important; border: none !important; }
 [data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
-[data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
+[data-testid="stMetricValue"] { font-size: 15px !important; font-weight: 500 !important; }
 [data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
@@ -513,48 +513,7 @@ else:
                     )
             st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
 
-            fig_pnl = go.Figure()
-
-            # Ligne colorée selon positif/négatif — on découpe en segments
-            x_vals = list(range(1, n_trades + 1))
-            for i in range(len(pnl_values) - 1):
-                y0, y1 = pnl_values[i], pnl_values[i + 1]
-                # Si le segment croise zéro, on interpole le point de croisement
-                if (y0 >= 0 and y1 >= 0):
-                    color = "#1D9E75"
-                    fig_pnl.add_trace(go.Scatter(x=[x_vals[i], x_vals[i+1]], y=[y0, y1],
-                        mode="lines", line=dict(color=color, width=2), showlegend=False))
-                elif (y0 < 0 and y1 < 0):
-                    color = "#E24B4A"
-                    fig_pnl.add_trace(go.Scatter(x=[x_vals[i], x_vals[i+1]], y=[y0, y1],
-                        mode="lines", line=dict(color=color, width=2), showlegend=False))
-                else:
-                    # Croisement de zéro — interpolation
-                    t = y0 / (y0 - y1)
-                    x_cross = x_vals[i] + t * (x_vals[i+1] - x_vals[i])
-                    c1 = "#1D9E75" if y0 >= 0 else "#E24B4A"
-                    c2 = "#E24B4A" if y0 >= 0 else "#1D9E75"
-                    fig_pnl.add_trace(go.Scatter(x=[x_vals[i], x_cross], y=[y0, 0],
-                        mode="lines", line=dict(color=c1, width=2), showlegend=False))
-                    fig_pnl.add_trace(go.Scatter(x=[x_cross, x_vals[i+1]], y=[0, y1],
-                        mode="lines", line=dict(color=c2, width=2), showlegend=False))
-
-            # Marqueurs avec valeur P&L affichée
-            marker_colors = ["#1D9E75" if p > 0 else "#E24B4A" for p in pnl_values]
-            marker_labels = [f"+{p:.0f}$" if p > 0 else f"{p:.0f}$" for p in pnl_values]
-            fig_pnl.add_trace(go.Scatter(
-                x=x_vals, y=pnl_values, mode="markers+text",
-                text=marker_labels,
-                textposition=["top center" if p >= 0 else "bottom center" for p in pnl_values],
-                textfont=dict(size=9, color=marker_colors),
-                marker=dict(size=7, color=marker_colors),
-                showlegend=False,
-                hovertemplate="Trade #%{x}<br>P&L cumulé : %{y:.0f}$<extra></extra>"
-            ))
-
-            fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
-            pnl_abs_max = max(abs(min(pnl_values)), abs(max(pnl_values))) * 1.25
-            # Tableau détail trades — au dessus des graphes
+            # Tableau détail trades
             with st.expander(f"Détail des {n_trades} trades"):
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
@@ -590,10 +549,8 @@ else:
                     return "font-weight:700"
 
                 def _fmt_pnl(v):
-                    try:
-                        return f"{float(v):+.2f}$"
-                    except:
-                        return v
+                    try: return f"{float(v):+.2f}$"
+                    except: return v
 
                 fmt_dict = {"P&L ($)": _fmt_pnl}
                 if pnl_a_col in df_display.columns:
@@ -603,20 +560,7 @@ else:
                 styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
                 if pnl_a_col in df_display.columns:
                     styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
-
                 st.dataframe(styled, use_container_width=True, hide_index=True)
-
-            fig_pnl.update_layout(
-                title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
-                height=260, margin=dict(t=40, b=28, l=48, r=24),
-                plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
-                yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
-                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                             line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
-            )
-            fig_pnl.update_xaxes(title_text="", showgrid=False, tickfont=dict(size=10))
-            fig_pnl.update_yaxes(showgrid=False, tickfont=dict(size=10))
-            st.plotly_chart(fig_pnl, use_container_width=True)
 
         df = m["df"]
 
@@ -657,8 +601,8 @@ else:
             ]
 
         # Graphe 1 — double axe Y avec prix réels
-        color_a = token_color(name_a)
-        color_b = token_color(name_b)
+        color_a = "#1B4F8A"   # bleu foncé
+        color_b = "#5BA4CF"   # bleu clair
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=df.index, y=df["A"], name=name_a,
@@ -778,9 +722,7 @@ if st.button("Calculer la matrice", use_container_width=False):
     for name in all_names:
         price_cache[name], _ = fetch_prices(CRYPTOS[name])
 
-    # Matrice win rate
     wr_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
-
     total_pairs = n * (n - 1) // 2
     done = 0
     for i, a in enumerate(all_names):
@@ -790,8 +732,8 @@ if st.button("Calculer la matrice", use_container_width=False):
                 continue
             done += 1
             bar.progress(done / total_pairs, text=f"{a} / {b}…")
-            sa, ea = price_cache.get(a), None
-            sb, eb = price_cache.get(b), None
+            sa = price_cache.get(a)
+            sb = price_cache.get(b)
             if sa is None or sb is None:
                 wr_matrix.loc[a, b] = None
                 wr_matrix.loc[b, a] = None
@@ -819,12 +761,10 @@ if st.button("Calculer la matrice", use_container_width=False):
                 pb = df_p.loc[date, "B"]
                 if pos_p is None:
                     if z_val > entry_z:
-                        pos_p = {"dir": "short_a", "ed": date, "ez": z_val,
-                                 "epa": pa, "epb": pb,
+                        pos_p = {"dir": "short_a", "ed": date, "epa": pa, "epb": pb,
                                  "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
                     elif z_val < -entry_z:
-                        pos_p = {"dir": "long_a", "ed": date, "ez": z_val,
-                                 "epa": pa, "epb": pb,
+                        pos_p = {"dir": "long_a", "ed": date, "epa": pa, "epb": pb,
                                  "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
                 else:
                     ex_n = (pos_p["dir"] == "short_a" and z_val < exit_z) or \
@@ -848,15 +788,21 @@ if st.button("Calculer la matrice", use_container_width=False):
                 wr_matrix.loc[b, a] = wr
 
     bar.empty()
+    # Stocker en session_state pour persistance
+    st.session_state["wr_matrix"] = wr_matrix.to_dict()
+    st.session_state["wr_labels"] = all_names
 
-    # Affichage heatmap
-    labels = all_names
+# Affichage — depuis session_state si disponible
+if "wr_matrix" in st.session_state:
+    labels = st.session_state["wr_labels"]
+    wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
+
     z_vals, text_vals, hover_vals = [], [], []
     for a in labels:
         row_z, row_t, row_h = [], [], []
         for b in labels:
-            val = wr_matrix.loc[a, b]
-            if a == b or val is None:
+            val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
+            if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
                 row_z.append(None)
                 row_t.append("")
                 row_h.append("—")
@@ -868,25 +814,19 @@ if st.button("Calculer la matrice", use_container_width=False):
         text_vals.append(row_t)
         hover_vals.append(row_h)
 
+    n = len(labels)
     fig_wr = go.Figure(go.Heatmap(
-        z=z_vals,
-        x=labels, y=labels,
-        text=text_vals,
-        hovertext=hover_vals,
+        z=z_vals, x=labels, y=labels,
+        text=text_vals, hovertext=hover_vals,
         hovertemplate="%{hovertext}<extra></extra>",
         texttemplate="%{text}",
         colorscale=[
-            [0.0,  "#fdf0f0"],
-            [0.4,  "#fef3e2"],
-            [0.6,  "#e8f7f1"],
-            [1.0,  "#0F6E56"],
+            [0.0, "#fdf0f0"], [0.4, "#fef3e2"],
+            [0.6, "#e8f7f1"], [1.0, "#0F6E56"],
         ],
-        zmin=0, zmax=1,
-        showscale=True,
-        colorbar=dict(
-            tickformat=".0%", thickness=12, len=0.8,
-            tickfont=dict(size=9), title=dict(text="Win rate", font=dict(size=9))
-        ),
+        zmin=0, zmax=1, showscale=True,
+        colorbar=dict(tickformat=".0%", thickness=12, len=0.8,
+                      tickfont=dict(size=9), title=dict(text="Win rate", font=dict(size=9)))
     ))
     fig_wr.update_layout(
         height=max(300, n * 36 + 80),
