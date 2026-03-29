@@ -29,6 +29,13 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
 .stApp { background-color: #ffffff !important; }
+/* Bordure pointillés + espacement uniforme sur les graphes Plotly */
+[data-testid="stPlotlyChart"] {
+    border: 1px dashed #ccc !important;
+    border-radius: 8px !important;
+    padding: 4px !important;
+    margin-bottom: 16px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
