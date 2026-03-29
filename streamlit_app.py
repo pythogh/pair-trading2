@@ -523,16 +523,16 @@ else:
                      .replace(f"SHORT {name_b}", f"↓ {name_b}")
                 )
 
-                def _color_pnl(val):
+                def _row_color(row):
                     try:
-                        v = float(val)
-                        if v > 0: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
-                        if v < 0: return "background-color:#fdf0f0;color:#A32D2D;font-weight:500"
+                        v = float(row["P&L ($)"])
+                        if v > 0: return ["background-color:#e8f7f1;color:#0F6E56"] * len(row)
+                        if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
                     except: pass
-                    return ""
+                    return [""] * len(row)
 
                 st.dataframe(
-                    df_display.style.applymap(_color_pnl, subset=["P&L ($)"]),
+                    df_display.style.apply(_row_color, axis=1),
                     use_container_width=True,
                     hide_index=True,
                 )
