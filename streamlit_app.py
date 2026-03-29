@@ -353,23 +353,13 @@ else:
         def _color_signal(val):
             return ""  # pas de coloration sur le signal
 
-        # Ajouter les colonnes logo
-        df_display = df_tab1_signal.reset_index(drop=True).copy()
-        df_display.insert(0, "Logo A", df_display["Paire"].apply(
-            lambda p: get_logo(p.split(" / ")[0]) if " / " in p else ""
-        ))
-        df_display.insert(2, "Logo B", df_display["Paire"].apply(
-            lambda p: get_logo(p.split(" / ")[1]) if " / " in p else ""
-        ))
-
         st.dataframe(
-            df_display.style
+            df_tab1_signal.reset_index(drop=True).style
             .applymap(_color_verdict,  subset=["Verdict"])
             .applymap(_color_corr,     subset=["Corrélation"])
             .applymap(_color_p,        subset=["Co-intégration p"])
             .applymap(_color_hl,       subset=["Half-Life"])
             .applymap(_color_z,        subset=["Z-Score"])
-            .applymap(_color_signal,   subset=["Signal"])
             .format({
                 "Corrélation":      "{:.3f}",
                 "Hedge Ratio β":    "{:.4f}",
@@ -378,15 +368,11 @@ else:
             }),
             use_container_width=True,
             hide_index=True,
-            column_config={
-                "Logo A": st.column_config.ImageColumn("", width="small"),
-                "Logo B": st.column_config.ImageColumn("", width="small"),
-            }
         )
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 st.divider()
-tab_bt, tab_wr = st.tabs(["🔍 Backtest", "🏆 Win Rate"])
+tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
     st.caption("Capital par défaut : 1 000 $")
@@ -848,6 +834,9 @@ with tab_wr:
         labels = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
+        # Filtre sur le Win Rate
+        wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 0, 5, format="%d%%")
+
         z_vals, text_vals, hover_vals = [], [], []
         for a in labels:
             row_z, row_t, row_h = [], [], []
@@ -858,9 +847,16 @@ with tab_wr:
                     row_t.append("")
                     row_h.append("—")
                 else:
-                    row_z.append(float(val))
-                    row_t.append(f"{float(val):.0%}")
-                    row_h.append(f"{a} / {b}<br>Win rate : {float(val):.0%}")
+                    v = float(val)
+                    # Masquer les cellules sous le seuil
+                    if v * 100 < wr_min:
+                        row_z.append(None)
+                        row_t.append("")
+                        row_h.append(f"{a} / {b}<br>Win rate : {v:.0%} (filtré)")
+                    else:
+                        row_z.append(v)
+                        row_t.append(f"{v:.0%}")
+                        row_h.append(f"{a} / {b}<br>Win rate : {v:.0%}")
             z_vals.append(row_z)
             text_vals.append(row_t)
             hover_vals.append(row_h)
@@ -885,3 +881,19 @@ with tab_wr:
             yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
         )
         st.plotly_chart(fig_wr, use_container_width=True)
+
+with tab_logo:
+    st.caption("Test de récupération des logos CoinGecko.")
+    logos = st.session_state.get("token_logos", {})
+    rows = []
+    for name, slug in CRYPTOS.items():
+        rows.append({"Logo": logos.get(slug, ""), "Token": name, "Slug": slug})
+    df_logos = pd.DataFrame(rows)
+    st.dataframe(
+        df_logos,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Logo": st.column_config.ImageColumn("Logo", width="small"),
+        }
+    )
