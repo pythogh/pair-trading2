@@ -763,3 +763,136 @@ else:
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
         st.plotly_chart(fig2, use_container_width=True)
+
+# ══ MATRICE WIN RATE ═══════════════════════════════════════════════════════════
+st.divider()
+st.markdown("#### Matrice Win Rate")
+st.caption("Win rate de chaque paire avec les paramètres backtest actuels. Calculé au clic.")
+
+if st.button("Calculer la matrice", use_container_width=False):
+    all_names = list(CRYPTOS.keys())
+    n = len(all_names)
+
+    bar = st.progress(0, text="Calcul en cours...")
+    price_cache = {}
+    for name in all_names:
+        price_cache[name], _ = fetch_prices(CRYPTOS[name])
+
+    # Matrice win rate
+    wr_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
+
+    total_pairs = n * (n - 1) // 2
+    done = 0
+    for i, a in enumerate(all_names):
+        for j, b in enumerate(all_names):
+            if i >= j:
+                wr_matrix.loc[a, b] = None
+                continue
+            done += 1
+            bar.progress(done / total_pairs, text=f"{a} / {b}…")
+            sa, ea = price_cache.get(a), None
+            sb, eb = price_cache.get(b), None
+            if sa is None or sb is None:
+                wr_matrix.loc[a, b] = None
+                wr_matrix.loc[b, a] = None
+                continue
+            m_pair = compute_metrics(sa, sb, a, b)
+            if m_pair is None:
+                wr_matrix.loc[a, b] = None
+                wr_matrix.loc[b, a] = None
+                continue
+
+            z_s = m_pair["z_score"].dropna()
+            df_p = m_pair["df"]
+            beta_p = m_pair["Hedge Ratio (β)"]
+            pa_last = float(sa.iloc[-1])
+            pb_last = float(sb.iloc[-1])
+            ratio_p = abs(beta_p * pb_last / pa_last)
+            alloc_a_p = 1000 / (1 + ratio_p)
+            alloc_b_p = 1000 - alloc_a_p
+
+            trades_p, pos_p = [], None
+            for date, z_val in z_s.items():
+                if date not in df_p.index:
+                    continue
+                pa = df_p.loc[date, "A"]
+                pb = df_p.loc[date, "B"]
+                if pos_p is None:
+                    if z_val > entry_z:
+                        pos_p = {"dir": "short_a", "ed": date, "ez": z_val,
+                                 "epa": pa, "epb": pb,
+                                 "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
+                    elif z_val < -entry_z:
+                        pos_p = {"dir": "long_a", "ed": date, "ez": z_val,
+                                 "epa": pa, "epb": pb,
+                                 "ua": alloc_a_p/pa, "ub": alloc_b_p/pb}
+                else:
+                    ex_n = (pos_p["dir"] == "short_a" and z_val < exit_z) or \
+                           (pos_p["dir"] == "long_a"  and z_val > -exit_z)
+                    ex_s = abs(z_val) > stop_z
+                    ex_d = (date - pos_p["ed"]).days >= max_duration
+                    if ex_n or ex_s or ex_d:
+                        if pos_p["dir"] == "short_a":
+                            pnl = (pos_p["epa"] - pa) * pos_p["ua"] + (pb - pos_p["epb"]) * pos_p["ub"]
+                        else:
+                            pnl = (pa - pos_p["epa"]) * pos_p["ua"] + (pos_p["epb"] - pb) * pos_p["ub"]
+                        trades_p.append(pnl)
+                        pos_p = None
+
+            if not trades_p:
+                wr_matrix.loc[a, b] = None
+                wr_matrix.loc[b, a] = None
+            else:
+                wr = sum(1 for p in trades_p if p > 0) / len(trades_p)
+                wr_matrix.loc[a, b] = wr
+                wr_matrix.loc[b, a] = wr
+
+    bar.empty()
+
+    # Affichage heatmap
+    labels = all_names
+    z_vals, text_vals, hover_vals = [], [], []
+    for a in labels:
+        row_z, row_t, row_h = [], [], []
+        for b in labels:
+            val = wr_matrix.loc[a, b]
+            if a == b or val is None:
+                row_z.append(None)
+                row_t.append("")
+                row_h.append("—")
+            else:
+                row_z.append(float(val))
+                row_t.append(f"{float(val):.0%}")
+                row_h.append(f"{a} / {b}<br>Win rate : {float(val):.0%}")
+        z_vals.append(row_z)
+        text_vals.append(row_t)
+        hover_vals.append(row_h)
+
+    fig_wr = go.Figure(go.Heatmap(
+        z=z_vals,
+        x=labels, y=labels,
+        text=text_vals,
+        hovertext=hover_vals,
+        hovertemplate="%{hovertext}<extra></extra>",
+        texttemplate="%{text}",
+        colorscale=[
+            [0.0,  "#fdf0f0"],
+            [0.4,  "#fef3e2"],
+            [0.6,  "#e8f7f1"],
+            [1.0,  "#0F6E56"],
+        ],
+        zmin=0, zmax=1,
+        showscale=True,
+        colorbar=dict(
+            tickformat=".0%", thickness=12, len=0.8,
+            tickfont=dict(size=9), title=dict(text="Win rate", font=dict(size=9))
+        ),
+    ))
+    fig_wr.update_layout(
+        height=max(300, n * 36 + 80),
+        margin=dict(t=20, b=20, l=120, r=60),
+        plot_bgcolor="#fff", paper_bgcolor="#fff",
+        xaxis=dict(tickfont=dict(size=10), side="top"),
+        yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
+    )
+    st.plotly_chart(fig_wr, use_container_width=True)
