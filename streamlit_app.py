@@ -512,7 +512,30 @@ else:
             st.plotly_chart(fig_pnl, use_container_width=True)
 
             with st.expander(f"Détail des {n_trades} trades"):
-                st.dataframe(df_trades, use_container_width=True, hide_index=True)
+                st.caption(f"Beta (Hedge Ratio) de la paire : **{m['Hedge Ratio (β)']:.4f}** — constant sur toute la période.")
+
+                # Formater la colonne type avec flèches
+                df_display = df_trades.copy()
+                df_display["type"] = df_display["type"].apply(lambda t:
+                    t.replace(f"LONG {name_a}", f"↑ {name_a}")
+                     .replace(f"SHORT {name_a}", f"↓ {name_a}")
+                     .replace(f"LONG {name_b}", f"↑ {name_b}")
+                     .replace(f"SHORT {name_b}", f"↓ {name_b}")
+                )
+
+                def _color_pnl(val):
+                    try:
+                        v = float(val)
+                        if v > 0: return "background-color:#e8f7f1;color:#0F6E56;font-weight:500"
+                        if v < 0: return "background-color:#fdf0f0;color:#A32D2D;font-weight:500"
+                    except: pass
+                    return ""
+
+                st.dataframe(
+                    df_display.style.applymap(_color_pnl, subset=["P&L ($)"]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
         st.divider()
         df = m["df"]
