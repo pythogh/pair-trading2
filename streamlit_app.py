@@ -488,7 +488,7 @@ else:
                     st.markdown(
                         f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:12px 14px 10px;">
                         <p style="font-size:10px;color:#aaa;margin:0 0 6px">{label}</p>
-                        <p style="font-size:20px;font-weight:500;margin:0">{value}</p>
+                        <p style="font-size:14px;font-weight:500;margin:0">{value}</p>
                         </div>""",
                         unsafe_allow_html=True
                     )
