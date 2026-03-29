@@ -25,7 +25,7 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="metric-container"] { background: #f7f6f3 !important; border-radius: 8px !important; padding: 10px 14px !important; border: none !important; }
 [data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
 [data-testid="stMetricValue"] { font-size: 16px !important; font-weight: 500 !important; }
-[data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
+[data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 10px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; }
 .stApp { background-color: #ffffff !important; }
@@ -57,27 +57,13 @@ if not CRYPTOS:
     st.stop()
 
 # ─── COULEURS PAR TOKEN ────────────────────────────────────────────────────────
-# Ajoute ici les couleurs de tes tokens (label exact tel qu'il apparaît dans l'app)
 TOKEN_COLORS = {
-    "Bitcoin":    "#F7931A",
-    "Ethereum":   "#8C8C8C",
-    "Solana":     "#9945FF",
-    "Bnb":        "#F3BA2F",
-    "Xrp":        "#346AA9",
-    "Cardano":    "#0033AD",
-    "Avalanche":  "#E84142",
-    "Polygon":    "#8247E5",
-    "Chainlink":  "#2A5ADA",
-    "Uniswap":    "#FF007A",
-    "Aave":       "#B6509E",
-    "Arbitrum":   "#28A0F0",
-    "Optimism":   "#FF0420",
-    "Lido":       "#00A3FF",
-    # Ajoute tes tokens ici avec leurs couleurs
+    "Bitcoin":      "#F7931A",
+    "Ethereum":     "#8C8C8C",
+    "Hyperliquid":  "rgb(151, 252, 228)",
 }
 
 def token_color(name: str) -> str:
-    """Retourne la couleur d'un token, ou une couleur par défaut."""
     return TOKEN_COLORS.get(name, "#888888")
 
 # ─── FONCTIONS ─────────────────────────────────────────────────────────────────
@@ -360,7 +346,7 @@ default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a
 default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
 # Ligne 1 : paires + bouton
-r1c1, r1c2, r1c3, _ = st.columns([1.0, 1.0, 0.4, 2.6])
+r1c1, r1c2, r1c3, r1c4, _ = st.columns([1.0, 1.0, 0.4, 0.4, 2.2])
 with r1c1:
     name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
 with r1c2:
@@ -369,17 +355,25 @@ with r1c3:
     st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
     analyse = st.button("Analyser")
     st.markdown("</div>", unsafe_allow_html=True)
+with r1c4:
+    st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+    if st.button("↺", help="Réinitialiser les résultats"):
+        st.session_state.pop("bt_data", None)
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 capital = 1000
 
 # Ligne 2 : paramètres backtest
-r2c1, r2c2, r2c3, _ = st.columns([1.0, 1.0, 1.0, 2.0])
+r2c1, r2c2, r2c3, r2c4, _ = st.columns([1.0, 1.0, 1.0, 1.0, 1.0])
 with r2c1:
     entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
 with r2c2:
     exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
 with r2c3:
     stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+with r2c4:
+    max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
 
 if name_a == name_b:
     st.warning("Choisis deux actifs différents.")
@@ -456,8 +450,10 @@ else:
                     (position["direction"] == "short_a" and z_val < exit_z) or
                     (position["direction"] == "long_a"  and z_val > -exit_z)
                 )
-                exit_stop = abs(z_val) > stop_z
-                if exit_normal or exit_stop:
+                exit_stop     = abs(z_val) > stop_z
+                exit_duration = (date - position["entry_date"]).days >= max_duration
+                if exit_normal or exit_stop or exit_duration:
+                    raison = "Stop-loss" if exit_stop else ("Durée max" if exit_duration else "Retour à la moyenne")
                     if position["direction"] == "short_a":
                         pnl_a = (position["entry_price_a"] - price_a) * position["units_a"]
                         pnl_b = (price_b - position["entry_price_b"]) * position["units_b"]
@@ -469,6 +465,7 @@ else:
                         "#":                  len(trades) + 1,
                         "entrée":             position["entry_date"].strftime("%Y-%m-%d"),
                         "sortie":             date.strftime("%Y-%m-%d"),
+                        "durée (j)":          (date - position["entry_date"]).days,
                         "type":               position["type"],
                         "z entrée":           round(position["entry_z"], 2),
                         "z sortie":           round(z_val, 2),
@@ -479,7 +476,7 @@ else:
                         f"P&L {name_a} ($)":  round(pnl_a, 2),
                         f"P&L {name_b} ($)":  round(pnl_b, 2),
                         "P&L ($)":            round(pnl_total, 2),
-                        "raison":             "Stop-loss" if exit_stop else "Retour à la moyenne",
+                        "raison":             raison,
                     })
                     position = None
 
@@ -668,17 +665,28 @@ else:
                 )
             ]
 
-        # Graphe 1 — prix normalisés
+        # Graphe 1 — double axe Y avec prix réels
+        color_a = token_color(name_a)
+        color_b = token_color(name_b)
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df["A"]/df["A"].iloc[0], name=name_a, line=dict(color=token_color(name_a), width=1.5)))
-        fig.add_trace(go.Scatter(x=df.index, y=df["B"]/df["B"].iloc[0], name=name_b, line=dict(color=token_color(name_b), width=1.5)))
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df["A"], name=name_a,
+            line=dict(color=color_a, width=1.5),
+            yaxis="y1"
+        ))
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df["B"], name=name_b,
+            line=dict(color=color_b, width=1.5),
+            yaxis="y2"
+        ))
 
         if trades:
-            entry_y_a = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in entry_dates]
-            exit_y_a  = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in exit_dates]
+            entry_y_a = [df["A"].loc[d] if d in df.index else None for d in entry_dates]
+            exit_y_a  = [df["A"].loc[d] if d in df.index else None for d in exit_dates]
 
             fig.add_trace(go.Scatter(
                 x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
+                yaxis="y1",
                 text=trade_nums, textposition="top center",
                 textfont=dict(size=9, color="#555"),
                 marker=dict(symbol="triangle-up", size=11, color=entry_colors, line=dict(width=1, color="#fff")),
@@ -687,6 +695,7 @@ else:
             ))
             fig.add_trace(go.Scatter(
                 x=exit_dates, y=exit_y_a, mode="markers+text", name="Sortie",
+                yaxis="y1",
                 text=trade_nums, textposition="bottom center",
                 textfont=dict(size=9, color="#555"),
                 marker=dict(symbol="triangle-down", size=11, color=exit_colors, line=dict(width=1, color="#fff")),
@@ -694,27 +703,27 @@ else:
                 customdata=exit_hover,
             ))
 
-        price_a_norm = df["A"] / df["A"].iloc[0]
-        price_b_norm = df["B"] / df["B"].iloc[0]
-        price_center = (price_a_norm.mean() + price_b_norm.mean()) / 2
-        price_abs_max = max(
-            abs(price_a_norm.max() - price_center),
-            abs(price_a_norm.min() - price_center),
-            abs(price_b_norm.max() - price_center),
-            abs(price_b_norm.min() - price_center),
-        ) * 1.15
         fig.update_layout(
-            title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-            height=260, margin=dict(t=40, b=28, l=48, r=24),
+            title=dict(text=f"Évolution des prix — {name_a} (gauche) · {name_b} (droite)", font=dict(size=12)),
+            height=260, margin=dict(t=40, b=28, l=56, r=56),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            showlegend=False,
-            xaxis=dict(range=[x_min, x_max]),
-            yaxis=dict(range=[price_center - price_abs_max, price_center + price_abs_max]),
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11)),
+            xaxis=dict(range=[x_min, x_max], showgrid=False, tickfont=dict(size=10)),
+            yaxis=dict(
+                title=dict(text=name_a, font=dict(color=color_a, size=10)),
+                tickfont=dict(color=color_a, size=9),
+                showgrid=False,
+            ),
+            yaxis2=dict(
+                title=dict(text=name_b, font=dict(color=color_b, size=10)),
+                tickfont=dict(color=color_b, size=9),
+                overlaying="y", side="right",
+                showgrid=False,
+            ),
             shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                          line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
         )
-        fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
-        fig.update_yaxes(showgrid=False, tickfont=dict(size=10))
         st.plotly_chart(fig, use_container_width=True)
 
         # Graphe 2 — z-score
