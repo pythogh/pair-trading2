@@ -15,7 +15,7 @@ st.set_page_config(page_title="Pair Trading", layout="wide")
 st.markdown("""
 <style>
 html, body, [class*="css"] { font-size: 13px !important; }
-h1 { font-size: 17px !important; font-weight: 500 !important; }
+h1 { font-size: 15px !important; font-weight: 500 !important; }
 h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
 [data-testid="stSidebar"] { background-color: #fafaf8 !important; min-width: 200px !important; max-width: 200px !important; }
