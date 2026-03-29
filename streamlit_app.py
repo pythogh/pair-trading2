@@ -40,6 +40,7 @@ button[data-baseweb="tab"] { font-size: 12px !important; }
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_DIR = "data"
+API_KEY  = "CG-zQg6pyzA4RPm5Tti2p7RTsn2"
 
 def scan_tokens():
     files = glob.glob(os.path.join(DATA_DIR, "*-historical-data.csv"))
