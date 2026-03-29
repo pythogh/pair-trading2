@@ -26,6 +26,10 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
 [data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
 [data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
+[data-testid="stSelectbox"] > div > div { min-height: 32px !important; font-size: 12px !important; }
+[data-testid="stNumberInput"] input { height: 32px !important; font-size: 12px !important; padding: 4px 8px !important; }
+[data-testid="stDateInput"] input { height: 32px !important; font-size: 12px !important; padding: 4px 8px !important; }
+[data-testid="stDateInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !important; margin-right: 4px !important; }
 .stApp { background-color: #ffffff !important; }
@@ -656,6 +660,7 @@ with tab_bt:
                     st.dataframe(styled, use_container_width=True, hide_index=True)
 
             df = m["df"]
+            df = df[(df.index >= ts_start) & (df.index <= ts_end)]
 
             # Plage de dates commune pour aligner les axes des 2 graphes
             x_min = df.index.min()
