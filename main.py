@@ -60,7 +60,7 @@ if not CRYPTOS:
 TOKEN_COLORS = {
     "Bitcoin":      "#F7931A",
     "Ethereum":     "#8C8C8C",
-    "Hyperliquid":  "#97FCE4",
+    "Hyperliquid":  "rgb(151, 252, 228)",
 }
 
 def token_color(name: str) -> str:
@@ -455,6 +455,7 @@ else:
                         "#":                  len(trades) + 1,
                         "entrée":             position["entry_date"].strftime("%Y-%m-%d"),
                         "sortie":             date.strftime("%Y-%m-%d"),
+                        "durée (j)":          (date - position["entry_date"]).days,
                         "type":               position["type"],
                         "z entrée":           round(position["entry_z"], 2),
                         "z sortie":           round(z_val, 2),
