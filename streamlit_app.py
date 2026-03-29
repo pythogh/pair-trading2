@@ -426,8 +426,9 @@ with tab_bt:
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-    # Une seule ligne : Actif A | Actif B | Analyser | Entrée z | Sortie z | Stop z | Durée max
-    c1, c2, c3, c4, c5, c6, c7, _ = st.columns([0.8, 0.8, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6])
+    import datetime as dt
+    # Une ligne : Actif A | Actif B | Analyser | z params (petits) | dates
+    c1, c2, c3, c4, c5, c6, c7, c8, c9 = st.columns([0.8, 0.8, 0.35, 0.35, 0.35, 0.35, 0.35, 0.6, 0.6])
     with c1:
         name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
     with c2:
@@ -437,20 +438,16 @@ with tab_bt:
         analyse = st.button("Analyser")
         st.markdown("</div>", unsafe_allow_html=True)
     with c4:
-        entry_z = st.number_input("Entrée (z)", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
+        entry_z = st.number_input("Entrée z", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
     with c5:
-        exit_z = st.number_input("Sortie (z)", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
+        exit_z = st.number_input("Sortie z", value=0.5, step=0.1, min_value=0.0, max_value=2.0, key="bt_exit")
     with c6:
-        stop_z = st.number_input("Stop (z)", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
+        stop_z = st.number_input("Stop z", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
     with c7:
-        max_duration = st.number_input("Durée max (j)", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
-
-    # Ligne 3 : filtre période
-    import datetime as dt
-    r3c1, r3c2, _ = st.columns([0.8, 0.8, 3.4])
-    with r3c1:
+        max_duration = st.number_input("Durée j", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
+    with c8:
         date_start = st.date_input("Début", value=dt.date.today() - dt.timedelta(days=365), key="bt_date_start")
-    with r3c2:
+    with c9:
         date_end = st.date_input("Fin", value=dt.date.today(), key="bt_date_end")
 
     capital = 1000
@@ -895,7 +892,7 @@ with tab_wr:
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
         # Filtre sur le Win Rate — réduit la matrice
-        wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 75, 5, format="%d%%")
+        wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 80, 5, format="%d%%")
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus du seuil
         threshold = wr_min / 100
@@ -915,6 +912,7 @@ with tab_wr:
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
         else:
+            display_labels = [dn(l) for l in filtered_labels]
             z_vals, text_vals, hover_vals = [], [], []
             for a in filtered_labels:
                 row_z, row_t, row_h = [], [], []
@@ -928,17 +926,17 @@ with tab_wr:
                         v = float(val)
                         row_z.append(v if v >= threshold else None)
                         row_t.append(f"{v:.0%}" if v >= threshold else "")
-                        row_h.append(f"{a} / {b}<br>Win rate : {v:.0%}")
+                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {v:.0%}")
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
 
             n = len(filtered_labels)
-            cell_size = max(40, min(55, 500 // max(n, 1)))
-            matrix_width = min(600, n * cell_size + 120)
+            cell_size = 44
+            matrix_px = n * cell_size + 160
 
             fig_wr = go.Figure(go.Heatmap(
-                z=z_vals, x=list(range(n)), y=list(range(n)),
+                z=z_vals, x=display_labels, y=display_labels,
                 text=text_vals, hovertext=hover_vals,
                 hovertemplate="%{hovertext}<extra></extra>",
                 texttemplate="%{text}",
@@ -948,46 +946,18 @@ with tab_wr:
                 ],
                 zmin=0, zmax=1, showscale=False,
             ))
-
-            # Logos 14px dans des cercles sur les axes
-            images = []
-            for i, lbl in enumerate(filtered_labels):
-                url = get_logo(lbl)
-                if not url:
-                    continue
-                # Axe Y gauche
-                images.append(dict(
-                    source=url, xref="paper", yref="y",
-                    x=-0.02, y=i, xanchor="right", yanchor="middle",
-                    sizex=0.05, sizey=0.7,
-                    layer="above"
-                ))
-                # Axe X haut
-                images.append(dict(
-                    source=url, xref="x", yref="paper",
-                    x=i, y=1.02, xanchor="center", yanchor="bottom",
-                    sizex=0.7, sizey=0.05,
-                    layer="above"
-                ))
-
             fig_wr.update_layout(
-                width=matrix_width,
-                height=max(280, n * cell_size + 80),
-                margin=dict(t=50, b=10, l=50, r=10),
+                width=matrix_px,
+                height=matrix_px,
+                margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                images=images,
-                xaxis=dict(
-                    tickmode="array", tickvals=list(range(n)),
-                    ticktext=["" if get_logo(l) else dn(l) for l in filtered_labels],
-                    tickfont=dict(size=9), side="top", showgrid=False,
-                ),
-                yaxis=dict(
-                    tickmode="array", tickvals=list(range(n)),
-                    ticktext=["" if get_logo(l) else dn(l) for l in filtered_labels],
-                    tickfont=dict(size=9), autorange="reversed", showgrid=False,
-                ),
+                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=-45),
+                yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=False),
             )
-            st.plotly_chart(fig_wr, use_container_width=False)
+            # Centrer via colonnes
+            _, col_center, _ = st.columns([1, matrix_px // 10, 1])
+            with col_center:
+                st.plotly_chart(fig_wr, use_container_width=False)
 
 with tab_logo:
     st.caption("Test de récupération des logos CoinMarketCap.")
