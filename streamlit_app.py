@@ -504,8 +504,10 @@ else:
             fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
             fig_pnl.update_layout(
                 title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
-                height=220, margin=dict(t=36, b=16, l=40, r=16),
+                height=220, margin=dict(t=40, b=24, l=48, r=24),
                 plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
+                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                             line=dict(color="#ccc", width=1, dash="dash"))]
             )
             fig_pnl.update_xaxes(title_text="Trade #", showgrid=False, tickfont=dict(size=10))
             fig_pnl.update_yaxes(showgrid=True, gridcolor="#f0ede6", tickfont=dict(size=10))
@@ -599,9 +601,9 @@ else:
 
         fig.update_layout(
             title=dict(text="Prix normalisés (base 1)", font=dict(size=12)),
-            height=280, margin=dict(t=36, b=16, l=40, r=16),
+            height=280, margin=dict(t=40, b=24, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11)),
+            showlegend=False,
             shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                          line=dict(color="#ccc", width=1, dash="dash"))]
         )
@@ -637,9 +639,9 @@ else:
 
         fig2.update_layout(
             title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
-            height=280, margin=dict(t=36, b=16, l=40, r=16),
+            height=280, margin=dict(t=40, b=24, l=48, r=24),
             plot_bgcolor="#fff", paper_bgcolor="#fff",
-            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="left", x=0, font=dict(size=11)),
+            showlegend=False,
             shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
                          line=dict(color="#ccc", width=1, dash="dash"))]
         )
