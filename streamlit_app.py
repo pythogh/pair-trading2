@@ -495,12 +495,39 @@ else:
             st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
 
             fig_pnl = go.Figure()
+
+            # Ligne colorée selon positif/négatif — on découpe en segments
+            x_vals = list(range(1, n_trades + 1))
+            for i in range(len(pnl_values) - 1):
+                y0, y1 = pnl_values[i], pnl_values[i + 1]
+                # Si le segment croise zéro, on interpole le point de croisement
+                if (y0 >= 0 and y1 >= 0):
+                    color = "#1D9E75"
+                    fig_pnl.add_trace(go.Scatter(x=[x_vals[i], x_vals[i+1]], y=[y0, y1],
+                        mode="lines", line=dict(color=color, width=2), showlegend=False))
+                elif (y0 < 0 and y1 < 0):
+                    color = "#E24B4A"
+                    fig_pnl.add_trace(go.Scatter(x=[x_vals[i], x_vals[i+1]], y=[y0, y1],
+                        mode="lines", line=dict(color=color, width=2), showlegend=False))
+                else:
+                    # Croisement de zéro — interpolation
+                    t = y0 / (y0 - y1)
+                    x_cross = x_vals[i] + t * (x_vals[i+1] - x_vals[i])
+                    c1 = "#1D9E75" if y0 >= 0 else "#E24B4A"
+                    c2 = "#E24B4A" if y0 >= 0 else "#1D9E75"
+                    fig_pnl.add_trace(go.Scatter(x=[x_vals[i], x_cross], y=[y0, 0],
+                        mode="lines", line=dict(color=c1, width=2), showlegend=False))
+                    fig_pnl.add_trace(go.Scatter(x=[x_cross, x_vals[i+1]], y=[0, y1],
+                        mode="lines", line=dict(color=c2, width=2), showlegend=False))
+
+            # Marqueurs colorés par trade
             fig_pnl.add_trace(go.Scatter(
-                x=list(range(1, n_trades + 1)), y=pnl_values,
-                mode="lines+markers",
-                line=dict(color="#1D9E75", width=1.5),
-                marker=dict(size=7, color=["#1D9E75" if p > 0 else "#E24B4A" for p in df_trades["P&L ($)"]])
+                x=x_vals, y=pnl_values, mode="markers",
+                marker=dict(size=7, color=["#1D9E75" if p > 0 else "#E24B4A" for p in pnl_values]),
+                showlegend=False,
+                hovertemplate="Trade #%{x}<br>P&L cumulé : %{y:.0f}$<extra></extra>"
             ))
+
             fig_pnl.add_hline(y=0, line_dash="dot", line_color="rgba(150,150,150,0.5)", line_width=1)
             fig_pnl.update_layout(
                 title=dict(text="P&L cumulé par trade (en $)", font=dict(size=12)),
@@ -514,9 +541,12 @@ else:
             st.plotly_chart(fig_pnl, use_container_width=True)
 
             with st.expander(f"Détail des {n_trades} trades"):
-                st.caption(
-                    f"Beta (Hedge Ratio) : **{m['Hedge Ratio (β)']:.4f}** — "
-                    f"pour {capital}$, allouer **{alloc_a:.0f}$ sur {name_a}** et **{alloc_b:.0f}$ sur {name_b}**."
+                st.markdown(
+                    f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
+                    f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
+                    f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
+                    f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
+                    unsafe_allow_html=True
                 )
 
                 # Formater la colonne type avec flèches
