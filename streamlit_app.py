@@ -514,7 +514,10 @@ else:
             st.plotly_chart(fig_pnl, use_container_width=True)
 
             with st.expander(f"Détail des {n_trades} trades"):
-                st.caption(f"Beta (Hedge Ratio) de la paire : **{m['Hedge Ratio (β)']:.4f}** — constant sur toute la période.")
+                st.caption(
+                    f"Beta (Hedge Ratio) : **{m['Hedge Ratio (β)']:.4f}** — "
+                    f"pour {capital}$, allouer **{alloc_a:.0f}$ sur {name_a}** et **{alloc_b:.0f}$ sur {name_b}**."
+                )
 
                 # Formater la colonne type avec flèches
                 df_display = df_trades.copy()
@@ -623,11 +626,11 @@ else:
         # Graphe 2 — z-score
         fig2 = go.Figure()
 
-        # Zones de surbrillance signal (au-dessus de +entry_z et en dessous de -entry_z)
-        fig2.add_hrect(y0=entry_z, y1=z_score_series.max() * 1.1,
-                       fillcolor="rgba(220,50,50,0.07)", line_width=0)
-        fig2.add_hrect(y0=z_score_series.min() * 1.1, y1=-entry_z,
-                       fillcolor="rgba(220,50,50,0.07)", line_width=0)
+        # Zones de surbrillance signal (au-dessus du stop-loss uniquement)
+        fig2.add_hrect(y0=stop_z, y1=z_score_series.max() * 1.1,
+                       fillcolor="rgba(220,50,50,0.1)", line_width=0)
+        fig2.add_hrect(y0=z_score_series.min() * 1.1, y1=-stop_z,
+                       fillcolor="rgba(220,50,50,0.1)", line_width=0)
 
         # Courbe z-score
         fig2.add_trace(go.Scatter(
