@@ -540,12 +540,13 @@ else:
                 height=260, margin=dict(t=40, b=24, l=48, r=24),
                 plot_bgcolor="#fff", paper_bgcolor="#fff", showlegend=False,
                 yaxis=dict(range=[-pnl_abs_max, pnl_abs_max]),
+                shapes=[dict(type="rect", xref="paper", yref="paper",
+                             x0=-0.06, y0=-0.08, x1=1.04, y1=1.12,
+                             line=dict(color="#ccc", width=1, dash="dash"), fillcolor="rgba(0,0,0,0)")]
             )
             fig_pnl.update_xaxes(title_text="", showgrid=False, tickfont=dict(size=10))
             fig_pnl.update_yaxes(showgrid=False, tickfont=dict(size=10))
-            st.markdown("<div style='border:1px dashed #ccc;border-radius:8px;padding:4px 8px;'>", unsafe_allow_html=True)
             st.plotly_chart(fig_pnl, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
 
             with st.expander(f"Détail des {n_trades} trades"):
                 st.markdown(
@@ -623,14 +624,6 @@ else:
             entry_y_a = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in entry_dates]
             exit_y_a  = [df["A"].loc[d] / df["A"].iloc[0] if d in df.index else None for d in exit_dates]
 
-            # Barres verticales aux dates d'entrée/sortie
-            for d, ec in zip(entry_dates, entry_colors):
-                if d in df.index:
-                    fig.add_vline(x=d, line_color=ec, line_width=1, line_dash="dot", opacity=0.5)
-            for d, ec in zip(exit_dates, exit_colors):
-                if d in df.index:
-                    fig.add_vline(x=d, line_color=ec, line_width=1, line_dash="dot", opacity=0.5)
-
             fig.add_trace(go.Scatter(
                 x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
                 text=trade_nums, textposition="top center",
@@ -663,12 +656,13 @@ else:
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
             yaxis=dict(range=[price_center - price_abs_max, price_center + price_abs_max]),
+            shapes=[dict(type="rect", xref="paper", yref="paper",
+                         x0=-0.06, y0=-0.08, x1=1.04, y1=1.12,
+                         line=dict(color="#ccc", width=1, dash="dash"), fillcolor="rgba(0,0,0,0)")]
         )
         fig.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig.update_yaxes(showgrid=False, tickfont=dict(size=10))
-        st.markdown("<div style='border:1px dashed #ccc;border-radius:8px;padding:4px 8px;'>", unsafe_allow_html=True)
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
         # Graphe 2 — z-score
         fig2 = go.Figure()
@@ -689,15 +683,6 @@ else:
         if trades:
             entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
             exit_z_vals  = [z_score_series.loc[d] if d in z_score_series.index else None for d in exit_dates]
-
-            # Barres verticales aux dates d'entrée
-            for d, ec in zip(entry_dates, entry_colors):
-                if d in z_score_series.index:
-                    fig2.add_vline(x=d, line_color=ec, line_width=1, line_dash="dot", opacity=0.5)
-            # Barres verticales aux dates de sortie
-            for d, ec in zip(exit_dates, exit_colors):
-                if d in z_score_series.index:
-                    fig2.add_vline(x=d, line_color=ec, line_width=1, line_dash="dot", opacity=0.5)
 
             fig2.add_trace(go.Scatter(
                 x=entry_dates, y=entry_z_vals, mode="markers+text", name="Entrée",
@@ -723,9 +708,10 @@ else:
             plot_bgcolor="#fff", paper_bgcolor="#fff",
             showlegend=False,
             yaxis=dict(range=[-z_abs_max, z_abs_max]),
+            shapes=[dict(type="rect", xref="paper", yref="paper",
+                         x0=-0.06, y0=-0.08, x1=1.04, y1=1.12,
+                         line=dict(color="#ccc", width=1, dash="dash"), fillcolor="rgba(0,0,0,0)")]
         )
         fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
         fig2.update_yaxes(showgrid=False, tickfont=dict(size=10))
-        st.markdown("<div style='border:1px dashed #ccc;border-radius:8px;padding:4px 8px;'>", unsafe_allow_html=True)
         st.plotly_chart(fig2, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
