@@ -241,6 +241,15 @@ def get_display_name(name: str) -> str:
         return f"{sym} · {cmc_name}"
     return name
 
+def dn(name: str) -> str:
+    """Display name court : 'SYM · Name' ou label si pas encore chargé."""
+    meta = st.session_state.get("token_logos", {}).get(name, {})
+    sym  = meta.get("symbol", "")
+    cmc_name = meta.get("name", "")
+    if sym and cmc_name:
+        return f"{sym} · {cmc_name}"
+    return name
+
 def logo_html(name: str, size: int = 18) -> str:
     url = get_logo(name)
     if not url:
@@ -271,7 +280,7 @@ if not st.session_state["matrix_results"] or _stale:
         if m is None:
             continue
         results_auto.append({
-            "Paire":           f"{a} / {b}",
+            "Paire":           f"{dn(a)} / {dn(b)}",
             "Corrélation":     m["Corrélation"],
             "Hedge Ratio β":   m["Hedge Ratio (β)"],
             "Co-intégration p": m["Co-intégration (p)"],
@@ -495,7 +504,7 @@ with tab_bt:
                         units_a = alloc_a / price_a
                         units_b = alloc_b / price_b
                         position = {
-                            "type": f"SHORT {name_a} / LONG {name_b}",
+                            "type": f"SHORT {dn(name_a)} / LONG {dn(name_b)}",
                             "entry_date": date, "entry_z": z_val,
                             "entry_price_a": price_a, "entry_price_b": price_b,
                             "units_a": units_a, "units_b": units_b,
@@ -505,7 +514,7 @@ with tab_bt:
                         units_a = alloc_a / price_a
                         units_b = alloc_b / price_b
                         position = {
-                            "type": f"LONG {name_a} / SHORT {name_b}",
+                            "type": f"LONG {dn(name_a)} / SHORT {dn(name_b)}",
                             "entry_date": date, "entry_z": z_val,
                             "entry_price_a": price_a, "entry_price_b": price_b,
                             "units_a": units_a, "units_b": units_b,
@@ -535,12 +544,12 @@ with tab_bt:
                             "type":               position["type"],
                             "z entrée":           round(position["entry_z"], 2),
                             "z sortie":           round(z_val, 2),
-                            f"{name_a} entrée $": round(position["entry_price_a"], 4),
-                            f"{name_a} sortie $": round(price_a, 4),
-                            f"{name_b} entrée $": round(position["entry_price_b"], 4),
-                            f"{name_b} sortie $": round(price_b, 4),
-                            f"P&L {name_a} ($)":  round(pnl_a, 2),
-                            f"P&L {name_b} ($)":  round(pnl_b, 2),
+                            f"{dn(name_a)} entrée $": round(position["entry_price_a"], 4),
+                            f"{dn(name_a)} sortie $": round(price_a, 4),
+                            f"{dn(name_b)} entrée $": round(position["entry_price_b"], 4),
+                            f"{dn(name_b)} sortie $": round(price_b, 4),
+                            f"P&L {dn(name_a)} ($)":  round(pnl_a, 2),
+                            f"P&L {dn(name_b)} ($)":  round(pnl_b, 2),
                             "P&L ($)":            round(pnl_total, 2),
                             "raison":             raison,
                         })
@@ -599,10 +608,10 @@ with tab_bt:
                     )
                     df_display = df_trades.copy()
                     df_display["type"] = df_display["type"].apply(lambda t:
-                        t.replace(f"LONG {name_a}", f"↑ {name_a}")
-                         .replace(f"SHORT {name_a}", f"↓ {name_a}")
-                         .replace(f"LONG {name_b}", f"↑ {name_b}")
-                         .replace(f"SHORT {name_b}", f"↓ {name_b}")
+                        t.replace(f"LONG {dn(name_a)}", f"↑ {dn(name_a)}")
+                         .replace(f"SHORT {dn(name_a)}", f"↓ {dn(name_a)}")
+                         .replace(f"LONG {dn(name_b)}", f"↑ {dn(name_b)}")
+                         .replace(f"SHORT {dn(name_b)}", f"↓ {dn(name_b)}")
                     )
                     def _row_color(row):
                         try:
@@ -612,8 +621,8 @@ with tab_bt:
                         except: pass
                         return [""] * len(row)
 
-                    pnl_a_col = f"P&L {name_a} ($)"
-                    pnl_b_col = f"P&L {name_b} ($)"
+                    pnl_a_col = f"P&L {dn(name_a)} ($)"
+                    pnl_b_col = f"P&L {dn(name_b)} ($)"
 
                     def _color_pnl_leg(val):
                         try:
@@ -659,7 +668,7 @@ with tab_bt:
 
                 entry_hover = [
                     f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
-                    f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {ze:.2f}"
+                    f"{dn(name_a)} : {pa:.4f}$<br>{dn(name_b)} : {pb:.4f}$<br>z : {ze:.2f}"
                     for n, t, d, pa, pb, ze in zip(
                         trade_nums, df_trades["type"], entry_dates,
                         entry_pa, entry_pb, df_trades["z entrée"]
@@ -667,7 +676,7 @@ with tab_bt:
                 ]
                 exit_hover = [
                     f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
-                    f"{name_a} : {pa:.4f}$<br>{name_b} : {pb:.4f}$<br>z : {zs:.2f}<br>"
+                    f"{dn(name_a)} : {pa:.4f}$<br>{dn(name_b)} : {pb:.4f}$<br>z : {zs:.2f}<br>"
                     f"P&L : <b>{pnl:+.2f}$</b>"
                     for n, r, d, pa, pb, zs, pnl in zip(
                         trade_nums, df_trades["raison"], exit_dates,
@@ -680,12 +689,12 @@ with tab_bt:
             color_b = "#5BA4CF"   # bleu clair
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=df.index, y=df["A"], name=name_a,
+                x=df.index, y=df["A"], name=dn(name_a),
                 line=dict(color=color_a, width=1.5),
                 yaxis="y1"
             ))
             fig.add_trace(go.Scatter(
-                x=df.index, y=df["B"], name=name_b,
+                x=df.index, y=df["B"], name=dn(name_b),
                 line=dict(color=color_b, width=1.5),
                 yaxis="y2"
             ))
@@ -714,7 +723,7 @@ with tab_bt:
                 ))
 
             fig.update_layout(
-                title=dict(text=f"Évolution des prix — {name_a} · {name_b}", font=dict(size=12)),
+                title=dict(text=f"Évolution des prix — {dn(name_a)} · {dn(name_b)}", font=dict(size=12)),
                 height=260, margin=dict(t=40, b=28, l=48, r=48),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 showlegend=False,
