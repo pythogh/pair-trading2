@@ -899,13 +899,18 @@ with tab_wr:
                     wr_matrix.loc[b, a] = wr
 
         _progress_container.empty()
-        # Stocker en session_state pour persistance
+        # Stocker en session_state pour persistance + signature des paramètres
         st.session_state["wr_matrix"] = wr_matrix.to_dict()
         st.session_state["wr_labels"] = all_names
+        st.session_state["wr_params"] = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
 
+    # Avertissement si paramètres changés depuis le dernier calcul
+    if "wr_matrix" in st.session_state:
+        current_params = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
+        if st.session_state.get("wr_params") != current_params:
+            st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Affichage — depuis session_state si disponible
     if "wr_matrix" in st.session_state:
-        labels = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
 
         # Filtre sur le Win Rate — réduit la matrice
