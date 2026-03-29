@@ -943,7 +943,7 @@ with tab_logo:
     
     _key_present = "API_CMC" in st.secrets
     st.markdown(f"Clé API_CMC dans les secrets : **{'✅ trouvée' if _key_present else '❌ non trouvée'}**")
-    st.markdown(f"Logos récupérés : **{sum(1 for v in logos_data.values() if v and not v.startswith('__'))}** / {len(CRYPTOS)}")
+    st.markdown(f"Logos récupérés : **{sum(1 for k, v in logos_data.items() if not k.startswith('__') and isinstance(v, dict) and v.get('logo'))}** / {len(CRYPTOS)}")
 
     if st.button("🔄 Recharger les logos"):
         st.session_state["token_logos"] = {}
