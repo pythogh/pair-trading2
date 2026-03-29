@@ -46,7 +46,6 @@ button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !impo
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_DIR = "data"
-API_KEY  = "CG-zQg6pyzA4RPm5Tti2p7RTsn2"
 
 def scan_tokens():
     files = glob.glob(os.path.join(DATA_DIR, "*-historical-data.csv"))
@@ -974,7 +973,7 @@ with tab_wr:
                 height=matrix_px,
                 margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=-45),
+                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=90),
                 yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=False),
             )
             # Centrer via colonnes
