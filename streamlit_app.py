@@ -178,28 +178,36 @@ if "token_logos" not in st.session_state:
 # ─── LOGOS ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_all_logos(slugs: tuple) -> dict:
-    """Récupère les URLs des logos via CoinGecko (sans clé API, image 'small')."""
+    """Récupère les URLs des logos via CoinGecko avec clé API."""
     import requests, time
     logos = {}
+    headers = {"x-cg-demo-api-key": API_KEY}
     for slug in slugs:
-        try:
-            r = requests.get(
-                f"https://api.coingecko.com/api/v3/coins/{slug}",
-                params={"localization": "false", "market_data": "false",
-                        "community_data": "false", "developer_data": "false",
-                        "tickers": "false"},
-                timeout=8
-            )
-            if r.status_code == 200:
-                logos[slug] = r.json().get("image", {}).get("small", "")
-            elif r.status_code == 429:
-                time.sleep(2)  # rate limit — on attend
-        except Exception:
-            pass
+        for attempt in range(3):
+            try:
+                r = requests.get(
+                    f"https://api.coingecko.com/api/v3/coins/{slug}",
+                    params={"localization": "false", "market_data": "false",
+                            "community_data": "false", "developer_data": "false",
+                            "tickers": "false"},
+                    headers=headers,
+                    timeout=8
+                )
+                if r.status_code == 200:
+                    logos[slug] = r.json().get("image", {}).get("small", "")
+                    break
+                elif r.status_code == 429:
+                    time.sleep(3)  # rate limit — retry
+                else:
+                    break
+            except Exception:
+                break
         logos.setdefault(slug, "")
     return logos
 
-if not st.session_state["token_logos"]:
+if not st.session_state["token_logos"] or any(
+    v == "" for v in st.session_state["token_logos"].values()
+):
     slugs = tuple(CRYPTOS.values())
     with st.spinner("Chargement des logos…"):
         st.session_state["token_logos"] = fetch_all_logos(slugs)
