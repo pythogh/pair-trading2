@@ -968,13 +968,30 @@ with tab_wr:
                 ],
                 zmin=0, zmax=1, showscale=False,
             ))
+            # Shapes : lignes aux bordures des cellules pour un vrai quadrillage
+            grid_shapes = []
+            for i in range(n + 1):
+                # lignes verticales
+                grid_shapes.append(dict(
+                    type="line", xref="x", yref="paper",
+                    x0=i - 0.5, x1=i - 0.5, y0=0, y1=1,
+                    line=dict(color="#ccc", width=1)
+                ))
+                # lignes horizontales
+                grid_shapes.append(dict(
+                    type="line", xref="paper", yref="y",
+                    x0=0, x1=1, y0=i - 0.5, y1=i - 0.5,
+                    line=dict(color="#ccc", width=1)
+                ))
+
             fig_wr.update_layout(
                 width=matrix_px,
                 height=matrix_px,
                 margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=True, tickangle=-90, gridcolor="#eee"),
-                yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=True, gridcolor="#eee"),
+                shapes=grid_shapes,
+                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=-90),
+                yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=False),
             )
             # Centrer via colonnes
             _, col_center, _ = st.columns([1, matrix_px // 10, 1])
