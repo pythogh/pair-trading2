@@ -816,7 +816,8 @@ with tab_wr:
         all_names = list(CRYPTOS.keys())
         n = len(all_names)
 
-        bar = st.progress(0, text="Calcul en cours...")
+        _progress_container = st.empty()
+        bar = _progress_container.progress(0, text="Calcul en cours...")
         price_cache = {}
         for name in all_names:
             price_cache[name], _ = fetch_prices(CRYPTOS[name])
@@ -830,7 +831,7 @@ with tab_wr:
                     wr_matrix.loc[a, b] = None
                     continue
                 done += 1
-                bar.progress(done / total_pairs, text=f"{a} / {b}…")
+                bar.progress(done / total_pairs, text=f"{dn(a)} / {dn(b)}…")
                 sa = price_cache.get(a)
                 sb = price_cache.get(b)
                 if sa is None or sb is None:
@@ -886,7 +887,7 @@ with tab_wr:
                     wr_matrix.loc[a, b] = wr
                     wr_matrix.loc[b, a] = wr
 
-        bar.empty()
+        _progress_container.empty()
         # Stocker en session_state pour persistance
         st.session_state["wr_matrix"] = wr_matrix.to_dict()
         st.session_state["wr_labels"] = all_names
