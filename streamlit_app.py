@@ -1050,8 +1050,23 @@ with tab_wr:
                         continue
                 passing_pairs.add((a, b))
 
-        # Tokens qui apparaissent dans au moins une paire valide
-        filtered_labels = [l for l in labels if any(l in p for p in passing_pairs)]
+        # Tokens qui apparaissent dans au moins une paire valide avec un autre token inclus
+        tokens_in_pairs = set()
+        for a, b in passing_pairs:
+            tokens_in_pairs.add(a)
+            tokens_in_pairs.add(b)
+
+        # Filtrage itératif : retirer les tokens qui n'ont plus de paire valide après exclusion
+        filtered_labels = [l for l in labels if l in tokens_in_pairs]
+        while True:
+            valid = [
+                l for l in filtered_labels
+                if any((l, o) in passing_pairs or (o, l) in passing_pairs
+                       for o in filtered_labels if o != l)
+            ]
+            if valid == filtered_labels:
+                break
+            filtered_labels = valid
 
         def cell_passes(a, b):
             return (a, b) in passing_pairs or (b, a) in passing_pairs
