@@ -806,18 +806,6 @@ with tab_bt:
                 showlegend=False
             ))
 
-            # Zones colorées et lignes seuils z-score
-            fig2.add_hrect(y0=entry_z,  y1=entry_z + 1.5,
-                           fillcolor="rgba(220,50,50,0.07)", line_width=0)
-            fig2.add_hrect(y0=-entry_z - 1.5, y1=-entry_z,
-                           fillcolor="rgba(220,50,50,0.07)", line_width=0)
-            fig2.add_hline(y=entry_z,  line_color="rgba(220,50,50,0.85)", line_width=1.5)
-            fig2.add_hline(y=-entry_z, line_color="rgba(220,50,50,0.85)", line_width=1.5)
-            if round(entry_z, 1) != 2.0:
-                fig2.add_hline(y=2,  line_color="rgba(220,50,50,0.3)", line_width=1, line_dash="dot")
-                fig2.add_hline(y=-2, line_color="rgba(220,50,50,0.3)", line_width=1, line_dash="dot")
-            fig2.add_hline(y=0, line_color="rgba(180,180,180,0.5)", line_width=1, line_dash="dot")
-
             if trades:
                 entry_z_vals = nearest_val(z_score_series, entry_dates)
                 exit_z_vals  = nearest_val(z_score_series, exit_dates)
@@ -840,6 +828,25 @@ with tab_bt:
                 ))
 
             z_abs_max = max(abs(z_score_series.max()), abs(z_score_series.min())) * 1.15
+            z_shapes = [
+                dict(type="rect", xref="paper", yref="y", x0=0, x1=1,
+                     y0=entry_z, y1=z_abs_max,
+                     fillcolor="rgba(220,50,50,0.08)", line_width=0, layer="below"),
+                dict(type="rect", xref="paper", yref="y", x0=0, x1=1,
+                     y0=-z_abs_max, y1=-entry_z,
+                     fillcolor="rgba(220,50,50,0.08)", line_width=0, layer="below"),
+                dict(type="line", xref="paper", yref="y", x0=0, x1=1,
+                     y0=entry_z, y1=entry_z,
+                     line=dict(color="rgba(220,50,50,0.9)", width=2)),
+                dict(type="line", xref="paper", yref="y", x0=0, x1=1,
+                     y0=-entry_z, y1=-entry_z,
+                     line=dict(color="rgba(220,50,50,0.9)", width=2)),
+                dict(type="line", xref="paper", yref="y", x0=0, x1=1,
+                     y0=0, y1=0,
+                     line=dict(color="rgba(180,180,180,0.5)", width=1, dash="dot")),
+                dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
+                     line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)"),
+            ]
             fig2.update_layout(
                 title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
                 height=260, margin=dict(t=40, b=28, l=48, r=48),
@@ -847,8 +854,7 @@ with tab_bt:
                 showlegend=False,
                 xaxis=dict(range=[x_min, x_max]),
                 yaxis=dict(range=[-z_abs_max, z_abs_max], mirror=True, tickfont=dict(size=10)),
-                shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                             line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)")]
+                shapes=z_shapes,
             )
             fig2.update_xaxes(showgrid=False, tickfont=dict(size=10))
             fig2.update_yaxes(showgrid=False)
