@@ -947,10 +947,14 @@ with tab_wr:
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
         nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
 
-        # Filtre sur le Win Rate — réduit la matrice
-        wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 80, 5, format="%d%%")
+        # Filtres
+        f1, f2, _ = st.columns([1, 1, 2])
+        with f1:
+            wr_min = st.slider("Win Rate ≥", 0, 100, 80, 5, format="%d%%", key="wr_filter")
+        with f2:
+            nt_min = st.slider("Trades ≥", 1, 50, 3, 1, key="nt_filter")
 
-        # Garder seulement les tokens qui ont au moins une paire au-dessus du seuil
+        # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
         threshold = wr_min / 100
         tokens_to_keep = set()
         for a in labels:
@@ -958,10 +962,13 @@ with tab_wr:
                 if a == b:
                     continue
                 val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
-                if val is not None and not (isinstance(val, float) and pd.isna(val)):
-                    if float(val) >= threshold:
-                        tokens_to_keep.add(a)
-                        tokens_to_keep.add(b)
+                nt  = nt_matrix.loc[a, b] if (not nt_matrix.empty and a in nt_matrix.index and b in nt_matrix.columns) else None
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    continue
+                nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else 0
+                if float(val) >= threshold and nt_val >= nt_min:
+                    tokens_to_keep.add(a)
+                    tokens_to_keep.add(b)
 
         filtered_labels = [l for l in labels if l in tokens_to_keep]
 
@@ -982,9 +989,10 @@ with tab_wr:
                     else:
                         v  = float(val)
                         nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else None
+                        passes = v >= threshold and (nt_val is not None and nt_val >= nt_min)
                         nt_str = f"\n{nt_val}T" if nt_val is not None else ""
-                        row_z.append(v if v >= threshold else None)
-                        row_t.append(f"{v:.0%}{nt_str}" if v >= threshold else "")
+                        row_z.append(v if passes else None)
+                        row_t.append(f"{v:.0%}{nt_str}" if passes else "")
                         row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {v:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
                 z_vals.append(row_z)
                 text_vals.append(row_t)
