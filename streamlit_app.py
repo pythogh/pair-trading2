@@ -315,9 +315,9 @@ METRICS_COMPACT = [
     {
         "emoji": "⏳",
         "name": "Half-Life",
-        "seuil": "5–15 jours",
+        "seuil": "5–15 jours (120–360h)",
         "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
-        "note": "Modèle Ornstein-Uhlenbeck. Temps moyen pour que l'écart se réduise de moitié.",
+        "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 720h (30j).",
     },
     {
         "emoji": "🌡️",
@@ -418,7 +418,7 @@ else:
 
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
-st.markdown("<p style='font-size:11px;color:#aaa;margin:8px 0 4px'>Paramètres de stratégie</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:11px;color:#aaa;margin:8px 0 4px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
 gp1, gp2, gp3, gp4, gp5 = st.columns([0.4, 0.4, 0.4, 0.4, 2.4])
 with gp1:
     entry_z = st.number_input("Entrée z", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
@@ -427,12 +427,13 @@ with gp2:
 with gp3:
     stop_z = st.number_input("Stop z", value=3.5, step=0.1, min_value=2.0, max_value=6.0, key="bt_stop")
 with gp4:
-    max_duration = st.number_input("Durée j", value=30, step=1, min_value=1, max_value=365, key="bt_duration")
+    max_duration = st.number_input("Durée max (h)", value=72, step=6, min_value=6, max_value=720, key="bt_duration",
+                                   help="Durée maximale d'un trade en heures (ex: 72h = 3 jours)")
 with gp5:
     today = dt.date.today()
     period_days = st.slider(
         "Période d'analyse",
-        min_value=30, max_value=730, value=365, step=30,
+        min_value=7, max_value=365, value=90, step=7,
         format="%d j",
         key="bt_period"
     )
