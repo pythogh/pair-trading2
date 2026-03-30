@@ -403,7 +403,7 @@ for col, info in zip(cols, METRICS_COMPACT):
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
-            <p style="font-size:9.5px;color:#bbb;line-height:1.5;margin:0;flex:1">{info['note']}</p>
+            <p style="font-size:8px;color:#bbb;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
