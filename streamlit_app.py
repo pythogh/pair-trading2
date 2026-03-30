@@ -1034,25 +1034,27 @@ with tab_wr:
                 return None if pd.isna(f) else f
             except: return None
 
-        def cell_passes(a, b):
-            val = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
-            if val is None or val < threshold:
-                return False
-            if has_nt:
-                nt = nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None
-                nt_val = int(float(nt)) if nt is not None and safe_float(nt) is not None else 0
-                if nt_val < nt_min:
-                    return False
-            return True
+        # Construire la liste des paires qui passent les filtres
+        passing_pairs = set()
+        for a in labels:
+            for b in labels:
+                if a == b:
+                    continue
+                wr = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
+                if wr is None or wr < threshold:
+                    continue
+                if has_nt:
+                    nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
+                    nt_val = int(nt) if nt is not None else 0
+                    if nt_val < nt_min:
+                        continue
+                passing_pairs.add((a, b))
 
-        # Filtrage itératif jusqu'à stabilité
-        candidates = labels[:]
-        while True:
-            new_candidates = [t for t in candidates if any(cell_passes(t, o) for o in candidates if o != t)]
-            if new_candidates == candidates:
-                break
-            candidates = new_candidates
-        filtered_labels = candidates
+        # Tokens qui apparaissent dans au moins une paire valide
+        filtered_labels = [l for l in labels if any(l in p for p in passing_pairs)]
+
+        def cell_passes(a, b):
+            return (a, b) in passing_pairs or (b, a) in passing_pairs
 
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
