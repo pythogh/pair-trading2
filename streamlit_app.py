@@ -680,7 +680,7 @@ with tab_bt:
                 st.markdown("<div style='margin:20px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
-                st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des {n_trades} trades</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des trades</p>", unsafe_allow_html=True)
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                     f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
