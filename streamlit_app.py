@@ -740,23 +740,15 @@ with tab_bt:
             ))
 
             if trades:
-                def nearest_price(df_col, dates):
-                    """Trouve le prix au timestamp le plus proche pour chaque date de trade."""
-                    result = []
-                    for d in dates:
-                        try:
-                            # Cherche le timestamp exact, sinon le plus proche
-                            if d in df_col.index:
-                                result.append(float(df_col.loc[d]))
-                            else:
-                                idx = df_col.index.get_indexer([d], method="nearest")[0]
-                                result.append(float(df_col.iloc[idx]) if idx >= 0 else None)
-                        except Exception:
-                            result.append(None)
-                    return result
-
-                entry_y_a = nearest_price(df["A"], entry_dates)
-                exit_y_a  = nearest_price(df["A"], exit_dates)
+                # Prix exacts depuis le tableau des trades (valeurs calculées au moment du signal)
+                price_a_col_entry = [c for c in df_trades.columns if "entrée $" in c and dn(name_a) in c]
+                price_a_col_exit  = [c for c in df_trades.columns if "sortie $" in c and dn(name_a) in c]
+                if price_a_col_entry and price_a_col_exit:
+                    entry_y_a = list(df_trades[price_a_col_entry[0]])
+                    exit_y_a  = list(df_trades[price_a_col_exit[0]])
+                else:
+                    entry_y_a = nearest_price(df["A"], entry_dates)
+                    exit_y_a  = nearest_price(df["A"], exit_dates)
 
                 fig.add_trace(go.Scatter(
                     x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
@@ -807,8 +799,8 @@ with tab_bt:
             ))
 
             if trades:
-                entry_z_vals = nearest_val(z_score_series, entry_dates)
-                exit_z_vals  = nearest_val(z_score_series, exit_dates)
+                entry_z_vals = list(df_trades["z entrée"])
+                exit_z_vals  = list(df_trades["z sortie"])
 
                 fig2.add_trace(go.Scatter(
                     x=entry_dates, y=entry_z_vals, mode="markers+text", name="Entrée",
