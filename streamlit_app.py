@@ -234,8 +234,8 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     }
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
-
-st.markdown(f"<p style='font-size:11px;color:#888;margin:0 0 24px'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#f0f0ee;padding:1px 4px;border-radius:3px;font-size:10px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+st.markdown(f"<p style='font-size:12px;color:#555;margin:0 0 20px'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#eee;padding:1px 5px;border-radius:3px;font-size:11px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
 if "prefill_a" not in st.session_state:
