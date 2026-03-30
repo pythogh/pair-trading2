@@ -806,13 +806,17 @@ with tab_bt:
                 showlegend=False
             ))
 
-            # Lignes horizontales seuils — entry_z paramétrable + z=2/-2 fixes
-            fig2.add_hline(y=entry_z,  line_color="rgba(220,50,50,0.7)",  line_width=1.5)
-            fig2.add_hline(y=-entry_z, line_color="rgba(220,50,50,0.7)",  line_width=1.5)
-            if entry_z != 2.0:
+            # Zones colorées et lignes seuils z-score
+            fig2.add_hrect(y0=entry_z,  y1=entry_z + 1.5,
+                           fillcolor="rgba(220,50,50,0.07)", line_width=0)
+            fig2.add_hrect(y0=-entry_z - 1.5, y1=-entry_z,
+                           fillcolor="rgba(220,50,50,0.07)", line_width=0)
+            fig2.add_hline(y=entry_z,  line_color="rgba(220,50,50,0.85)", line_width=1.5)
+            fig2.add_hline(y=-entry_z, line_color="rgba(220,50,50,0.85)", line_width=1.5)
+            if round(entry_z, 1) != 2.0:
                 fig2.add_hline(y=2,  line_color="rgba(220,50,50,0.3)", line_width=1, line_dash="dot")
                 fig2.add_hline(y=-2, line_color="rgba(220,50,50,0.3)", line_width=1, line_dash="dot")
-            fig2.add_hline(y=0, line_color="rgba(180,180,180,0.6)", line_width=1, line_dash="dot")
+            fig2.add_hline(y=0, line_color="rgba(180,180,180,0.5)", line_width=1, line_dash="dot")
 
             if trades:
                 entry_z_vals = nearest_val(z_score_series, entry_dates)
