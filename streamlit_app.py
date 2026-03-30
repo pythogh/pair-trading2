@@ -22,9 +22,9 @@ html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, i
     font-size: 13px !important;
     -webkit-font-smoothing: antialiased !important;
 }
-.stApp { background: #f9f7f4 !important; }
+.stApp { background: #fdfcfb !important; }
 
-.block-container { background: #f9f7f4 !important; }
+.block-container { background: #fdfcfb !important; }
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
 /* ── Titre ── */
@@ -472,6 +472,7 @@ else:
 
         st.dataframe(
             df_tab1_signal.reset_index(drop=True).style
+            .set_properties(**{"background-color": "#ffffff"})
             .applymap(_color_verdict,  subset=["Verdict"])
             .applymap(_color_corr,     subset=["Corrélation"])
             .applymap(_color_p,        subset=["Co-intégration p"])
@@ -724,7 +725,7 @@ with tab_bt:
                     fmt_dict[pnl_a_col] = _fmt_pnl
                     fmt_dict[pnl_b_col] = _fmt_pnl
 
-                styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
+                styled = df_display.style.set_properties(**{"background-color": "#ffffff"}).apply(_row_color, axis=1).format(fmt_dict)
                 if pnl_a_col in df_display.columns:
                     styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
                 st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -1204,21 +1205,28 @@ with tab_wr:
             # Clic sur une cellule → prefill backtest
             _, col_center, _ = st.columns([1, matrix_px // 10, 1])
             with col_center:
-                selected = st.plotly_chart(fig_wr, use_container_width=False,
-                                           on_select="rerun", selection_mode="points", key="wr_heatmap")
+                sel = st.plotly_chart(fig_wr, use_container_width=False,
+                                         on_select="rerun", selection_mode="points", key="wr_heatmap")
 
-            if selected and selected.get("selection", {}).get("points"):
-                pt = selected["selection"]["points"][0]
-                x_label = pt.get("x")  # display name token B
-                y_label = pt.get("y")  # display name token A
-                # Retrouver les labels internes depuis les display names
+            # Lecture du clic depuis session_state
+            sel_data = st.session_state.get("wr_heatmap", {})
+            points = sel_data.get("selection", {}).get("points", []) if isinstance(sel_data, dict) else []
+            if not points:
+                # Essai direct sur la valeur retournée
+                try:
+                    points = sel.get("selection", {}).get("points", [])
+                except: points = []
+            if points:
+                pt = points[0]
+                x_label = pt.get("x")
+                y_label = pt.get("y")
                 dn_to_label = {dn(l): l for l in filtered_labels}
-                token_a = dn_to_label.get(y_label)
-                token_b = dn_to_label.get(x_label)
+                token_a = dn_to_label.get(str(y_label))
+                token_b = dn_to_label.get(str(x_label))
                 if token_a and token_b and token_a != token_b:
                     st.session_state.prefill_a = token_a
                     st.session_state.prefill_b = token_b
-                    st.success(f"✓ Paire sélectionnée : **{y_label} / {x_label}** — va dans l'onglet Backtest")
+                    st.success(f"✓ **{y_label} / {x_label}** sélectionnés — ouvre l'onglet Backtest")
 
 with tab_logo:
     st.caption("Test de récupération des logos CoinMarketCap.")
