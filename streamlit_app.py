@@ -681,6 +681,7 @@ with tab_bt:
 
                 # Tableau détail trades
                 st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des {n_trades} trades</p>", unsafe_allow_html=True)
+                st.markdown("<div style='border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:8px'>", unsafe_allow_html=True)
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                     f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
@@ -727,6 +728,7 @@ with tab_bt:
                 if pnl_a_col in df_display.columns:
                     styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
                 st.dataframe(styled, use_container_width=True, hide_index=True)
+                st.markdown("</div>", unsafe_allow_html=True)
 
             df = m["df"]
             df = df[(df.index >= ts_start) & (df.index <= ts_end)]
@@ -1026,42 +1028,29 @@ with tab_wr:
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
         threshold = wr_min / 100
-        tokens_to_keep = set()
-        for a in labels:
-            for b in labels:
-                if a == b:
-                    continue
-                val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
-                nt  = nt_matrix.loc[a, b] if (not nt_matrix.empty and a in nt_matrix.index and b in nt_matrix.columns) else None
-                if val is None or (isinstance(val, float) and pd.isna(val)):
-                    continue
+        has_nt = not nt_matrix.empty
+
+        def cell_passes(a, b):
+            val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
+            if val is None or (isinstance(val, float) and pd.isna(val)):
+                return False
+            if float(val) < threshold:
+                return False
+            if has_nt:
+                nt = nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None
                 nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else 0
-                if float(val) >= threshold and nt_val >= nt_min:
-                    tokens_to_keep.add(a)
-                    tokens_to_keep.add(b)
+                if nt_val < nt_min:
+                    return False
+            return True
 
-        filtered_labels = [l for l in labels if l in tokens_to_keep]
-
-        # Iteration jusqu'à stabilité — retirer les tokens sans aucune paire visible
-        def get_stable_labels(candidates):
-            prev = None
-            while prev != candidates:
-                prev = candidates[:]
-                candidates = [
-                    t for t in candidates
-                    if any(
-                        (lambda v, n: v is not None and not (isinstance(v, float) and pd.isna(v))
-                         and float(v) >= threshold
-                         and (int(n) if n is not None and not (isinstance(n, float) and pd.isna(n)) else 0) >= nt_min)(
-                            wr_matrix.loc[t, o] if (t in wr_matrix.index and o in wr_matrix.columns) else None,
-                            nt_matrix.loc[t, o] if (not nt_matrix.empty and t in nt_matrix.index and o in nt_matrix.columns) else None
-                        )
-                        for o in candidates if o != t
-                    )
-                ]
-            return candidates
-
-        filtered_labels = get_stable_labels(filtered_labels)
+        # Filtrage itératif jusqu'à stabilité
+        candidates = labels[:]
+        while True:
+            new_candidates = [t for t in candidates if any(cell_passes(t, o) for o in candidates if o != t)]
+            if new_candidates == candidates:
+                break
+            candidates = new_candidates
+        filtered_labels = candidates
 
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
