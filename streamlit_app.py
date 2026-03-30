@@ -681,7 +681,6 @@ with tab_bt:
 
                 # Tableau détail trades
                 st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des {n_trades} trades</p>", unsafe_allow_html=True)
-                st.markdown("<div style='border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:8px'>", unsafe_allow_html=True)
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                     f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
@@ -728,7 +727,6 @@ with tab_bt:
                 if pnl_a_col in df_display.columns:
                     styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
                 st.dataframe(styled, use_container_width=True, hide_index=True)
-                st.markdown("</div>", unsafe_allow_html=True)
 
             df = m["df"]
             df = df[(df.index >= ts_start) & (df.index <= ts_end)]
@@ -1030,15 +1028,19 @@ with tab_wr:
         threshold = wr_min / 100
         has_nt = not nt_matrix.empty
 
+        def safe_float(v):
+            try:
+                f = float(v)
+                return None if pd.isna(f) else f
+            except: return None
+
         def cell_passes(a, b):
-            val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
-            if val is None or (isinstance(val, float) and pd.isna(val)):
-                return False
-            if float(val) < threshold:
+            val = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
+            if val is None or val < threshold:
                 return False
             if has_nt:
                 nt = nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None
-                nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else 0
+                nt_val = int(float(nt)) if nt is not None and safe_float(nt) is not None else 0
                 if nt_val < nt_min:
                     return False
             return True
