@@ -509,6 +509,8 @@ st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
+    st.caption("Capital par défaut : 1 000 $")
+
     keys = list(CRYPTOS.keys())
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
@@ -678,7 +680,7 @@ with tab_bt:
                 st.markdown("<div style='margin:20px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
-                st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des trades</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des {n_trades} trades</p>", unsafe_allow_html=True)
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                     f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
@@ -1000,10 +1002,25 @@ with tab_wr:
                     nt_matrix.loc[a, b] = len(trades_p)
                     nt_matrix.loc[b, a] = len(trades_p)
 
+        # Stocker aussi le z-score actuel pour chaque paire
+        z_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
+        for a in all_names:
+            for b in all_names:
+                if a == b:
+                    z_matrix.loc[a, b] = None
+                    continue
+                sa = price_cache.get(a)
+                sb = price_cache.get(b)
+                if sa is None or sb is None:
+                    z_matrix.loc[a, b] = None
+                    continue
+                m_pair = compute_metrics(sa, sb, a, b)
+                z_matrix.loc[a, b] = m_pair["Z-Score"] if m_pair else None
+
         _progress_container.empty()
-        # Stocker en session_state pour persistance + signature des paramètres
         st.session_state["wr_matrix"] = wr_matrix.to_dict()
         st.session_state["nt_matrix"] = nt_matrix.to_dict()
+        st.session_state["z_matrix"]  = z_matrix.to_dict()
         st.session_state["wr_labels"] = all_names
         st.session_state["wr_params"] = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
 
@@ -1014,9 +1031,10 @@ with tab_wr:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Affichage — depuis session_state si disponible
     if "wr_matrix" in st.session_state:
-        labels = st.session_state["wr_labels"]
+        labels    = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
         nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
+        z_matrix  = pd.DataFrame(st.session_state.get("z_matrix", {}))
 
         # Filtres centrés
         _, f1, f2, _ = st.columns([1, 1.5, 1.5, 1])
@@ -1108,28 +1126,36 @@ with tab_wr:
                 row_z, row_t, row_h = [], [], []
                 for b in filtered_labels:
                     if a == b:
-                        row_z.append(-1); row_t.append(""); row_h.append("—")
+                        row_z.append(None); row_t.append(""); row_h.append("—")
                         continue
-                    val = all_z.get((a, b))
+                    wr  = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
+                    zscore = safe_float(z_matrix.loc[a, b] if (not z_matrix.empty and a in z_matrix.index and b in z_matrix.columns) else None)
                     nt_val = None
                     if has_nt and a in nt_matrix.index and b in nt_matrix.columns:
                         nt_val = int(float(nt_matrix.loc[a, b])) if safe_float(nt_matrix.loc[a, b]) is not None else None
                     passes = cell_passes(a, b)
-                    if val is None:
-                        row_z.append(-1); row_t.append(""); row_h.append("—")
-                    elif passes:
-                        nt_str = f"\n{nt_val}T" if nt_val is not None else ""
-                        row_z.append(val)
-                        row_t.append(f"{val:.0%}{nt_str}")
-                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {val:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
-                    else:
-                        # Sous le seuil — gris clair, pas de texte
-                        row_z.append(-0.5)
+
+                    if not passes or zscore is None:
+                        row_z.append(None)
                         row_t.append("")
-                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {val:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else "") + "<br><i>sous le seuil</i>")
-                z_vals.append(row_z)
-                text_vals.append(row_t)
-                hover_vals.append(row_h)
+                        hover = f"{dn(a)} / {dn(b)}"
+                        if wr is not None:
+                            hover += f"<br>WR : {wr:.0%}"
+                        row_h.append(hover)
+                    else:
+                        # Couleur basée sur |z-score| : plus c'est fort, plus c'est coloré
+                        abs_z = abs(zscore)
+                        color_val = min(abs_z / 3.0, 1.0)  # normalise 0→3 en 0→1
+                        signal_icon = "↑" if zscore > 0 else "↓"
+                        row_z.append(color_val)
+                        row_t.append(f"z {zscore:+.1f}{signal_icon}\n{wr:.0%} WR")
+                        row_h.append(
+                            f"<b>{dn(a)} / {dn(b)}</b><br>"
+                            f"Z-Score : <b>{zscore:+.2f}</b> {signal_icon}<br>"
+                            f"Win Rate : {wr:.0%}" +
+                            (f"<br>Trades : {nt_val}" if nt_val else "") +
+                            "<br><i>Clic → Backtest</i>"
+                        )
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
@@ -1143,45 +1169,51 @@ with tab_wr:
                 text=text_vals, hovertext=hover_vals,
                 hovertemplate="%{hovertext}<extra></extra>",
                 texttemplate="%{text}",
+                textfont=dict(size=9),
                 colorscale=[
-                    [0.0,  "#f5f5f5"],   # -1   → blanc cassé (diagonale / null)
-                    [0.25, "#f5f5f5"],   # -0.5 → gris très clair (sous seuil)
-                    [0.26, "#fdf0f0"],   # 0    → rouge très clair
-                    [0.6,  "#fef3e2"],   # 0.5  → orange clair
-                    [0.75, "#e8f7f1"],   # 0.75 → vert clair
-                    [1.0,  "#0F6E56"],   # 1    → vert foncé
+                    [0.0,  "#f8f8f8"],
+                    [0.01, "#e8f3ff"],
+                    [0.4,  "#93c5fd"],
+                    [0.7,  "#3b82f6"],
+                    [1.0,  "#1e3a8a"],
                 ],
-                zmin=-1, zmax=1, showscale=False,
+                zmin=0, zmax=1, showscale=False,
             ))
-            # Shapes : lignes aux bordures des cellules pour un vrai quadrillage
+            # Shapes : quadrillage
             grid_shapes = []
             for i in range(n + 1):
-                # lignes verticales
-                grid_shapes.append(dict(
-                    type="line", xref="x", yref="paper",
-                    x0=i - 0.5, x1=i - 0.5, y0=0, y1=1,
-                    line=dict(color="#ccc", width=1)
-                ))
-                # lignes horizontales
-                grid_shapes.append(dict(
-                    type="line", xref="paper", yref="y",
-                    x0=0, x1=1, y0=i - 0.5, y1=i - 0.5,
-                    line=dict(color="#ccc", width=1)
-                ))
+                grid_shapes.append(dict(type="line", xref="x", yref="paper",
+                    x0=i-0.5, x1=i-0.5, y0=0, y1=1, line=dict(color="#ddd", width=1)))
+                grid_shapes.append(dict(type="line", xref="paper", yref="y",
+                    x0=0, x1=1, y0=i-0.5, y1=i-0.5, line=dict(color="#ddd", width=1)))
 
             fig_wr.update_layout(
-                width=matrix_px,
-                height=matrix_px,
+                width=matrix_px, height=matrix_px,
                 margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 shapes=grid_shapes,
                 xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=-90),
                 yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=False),
             )
-            # Centrer via colonnes
+
+            # Clic sur une cellule → prefill backtest
             _, col_center, _ = st.columns([1, matrix_px // 10, 1])
             with col_center:
-                st.plotly_chart(fig_wr, use_container_width=False)
+                selected = st.plotly_chart(fig_wr, use_container_width=False,
+                                           on_select="rerun", selection_mode="points", key="wr_heatmap")
+
+            if selected and selected.get("selection", {}).get("points"):
+                pt = selected["selection"]["points"][0]
+                x_label = pt.get("x")  # display name token B
+                y_label = pt.get("y")  # display name token A
+                # Retrouver les labels internes depuis les display names
+                dn_to_label = {dn(l): l for l in filtered_labels}
+                token_a = dn_to_label.get(y_label)
+                token_b = dn_to_label.get(x_label)
+                if token_a and token_b and token_a != token_b:
+                    st.session_state.prefill_a = token_a
+                    st.session_state.prefill_b = token_b
+                    st.success(f"✓ Paire sélectionnée : **{y_label} / {x_label}** — va dans l'onglet Backtest")
 
 with tab_logo:
     st.caption("Test de récupération des logos CoinMarketCap.")
