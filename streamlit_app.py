@@ -1049,6 +1049,7 @@ with tab_wr:
                     if nt_val < nt_min:
                         continue
                 passing_pairs.add((a, b))
+                passing_pairs.add((b, a))
 
         # Tokens qui apparaissent dans au moins une paire valide avec un autre token inclus
         tokens_in_pairs = set()
