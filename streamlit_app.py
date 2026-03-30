@@ -727,6 +727,9 @@ with tab_bt:
                 if pnl_a_col in df_display.columns:
                     styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
                 st.dataframe(styled, use_container_width=True, hide_index=True)
+                st.markdown("<div style='margin:24px 0 0'></div>", unsafe_allow_html=True)
+                st.divider()
+                st.markdown("<div style='margin:0 0 8px'></div>", unsafe_allow_html=True)
 
             df = m["df"]
             df = df[(df.index >= ts_start) & (df.index <= ts_end)]
