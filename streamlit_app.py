@@ -919,15 +919,7 @@ with tab_bt:
 
 with tab_wr:
 
-    _run_calc = False
-
-    if False: pass  # placeholder — button moved below filters
-
-    if st.session_state.get("_do_calc"):
-        st.session_state["_do_calc"] = False
-        _run_calc = True
-
-    if _run_calc:
+    if st.session_state.get("_do_calc") or st.session_state.get("_run_calc_now"):
         all_names = list(CRYPTOS.keys())
         n = len(all_names)
 
@@ -1033,6 +1025,7 @@ with tab_wr:
         st.session_state["z_matrix"]  = z_matrix.to_dict()
         st.session_state["wr_labels"] = all_names
         st.session_state["wr_params"] = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
+        st.session_state.pop("_do_calc", None)
 
     # Avertissement si paramètres changés depuis le dernier calcul
     if "wr_matrix" in st.session_state:
@@ -1056,7 +1049,6 @@ with tab_wr:
             st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
             if st.button("Analyser", key="mat_run"):
                 st.session_state["_do_calc"] = True
-                st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
         with mc3:
             pass
