@@ -22,7 +22,8 @@ html, body, [class*="css"], .stMarkdown, .stText, p, span, div {
     font-size: 13px !important;
     -webkit-font-smoothing: antialiased !important;
 }
-.stApp { background: #ffffff !important; }
+.stApp { background: #f9f7f4 !important; }
+.block-container { background: #f9f7f4 !important; }
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
 /* ── Titre ── */
@@ -509,7 +510,6 @@ st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
-    st.caption("Capital par défaut : 1 000 $")
 
     keys = list(CRYPTOS.keys())
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
