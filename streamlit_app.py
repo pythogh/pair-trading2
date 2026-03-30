@@ -102,7 +102,7 @@ button[data-baseweb="tab"][aria-selected="true"] { color: #111 !important; font-
 [data-testid="stCaptionContainer"] { font-size: 11px !important; color: #bbb !important; }
 
 /* ── Plotly charts ── */
-[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] > div, .stPlotlyChart { margin-bottom: 20px !important; }
+[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] > div, .stPlotlyChart { margin-bottom: 20px !important; background: #ffffff !important; border-radius: 8px !important; }
 
 /* ── Progress bar ── */
 [data-testid="stProgressBar"] > div { background: #111 !important; border-radius: 4px !important; }
@@ -400,7 +400,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;">
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
@@ -671,7 +671,7 @@ with tab_bt:
                 for col, (label, value, color, icon) in zip(bt_cols, bt_cards):
                     with col:
                         st.markdown(
-                            f"""<div style="border:1px solid #eee;border-radius:8px;padding:14px 16px 12px;">
+                            f"""<div style="border:1px solid #eee;border-radius:8px;padding:14px 16px 12px;background:#ffffff;">
                             <p style="font-size:10px;color:#999;margin:0 0 8px;letter-spacing:0.04em;text-transform:uppercase">{label}</p>
                             <p style="font-size:22px;font-weight:400;margin:0;color:{color};letter-spacing:-0.02em">{"<span style='font-size:14px;margin-right:3px'>"+icon+"</span>" if icon else ""}{value}</p>
                             </div>""",
@@ -1135,17 +1135,21 @@ with tab_wr:
                         nt_val = int(float(nt_matrix.loc[a, b])) if safe_float(nt_matrix.loc[a, b]) is not None else None
                     passes = cell_passes(a, b)
 
-                    if not passes or zscore is None:
+                    if not passes or wr is None:
                         row_z.append(None)
                         row_t.append("")
                         hover = f"{dn(a)} / {dn(b)}"
                         if wr is not None:
                             hover += f"<br>WR : {wr:.0%}"
                         row_h.append(hover)
+                    elif zscore is None:
+                        # WR passe mais pas de z-score — affiche juste WR
+                        row_z.append(0.3)
+                        row_t.append(f"{wr:.0%} WR")
+                        row_h.append(f"<b>{dn(a)} / {dn(b)}</b><br>Win Rate : {wr:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else "") + "<br><i>Clic → Backtest</i>")
                     else:
-                        # Couleur basée sur |z-score| : plus c'est fort, plus c'est coloré
                         abs_z = abs(zscore)
-                        color_val = min(abs_z / 3.0, 1.0)  # normalise 0→3 en 0→1
+                        color_val = min(abs_z / 3.0, 1.0)
                         signal_icon = "↑" if zscore > 0 else "↓"
                         row_z.append(color_val)
                         row_t.append(f"z {zscore:+.1f}{signal_icon}\n{wr:.0%} WR")
