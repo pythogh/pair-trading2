@@ -1033,28 +1033,27 @@ with tab_wr:
         if st.session_state.get("wr_params") != current_params:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Affichage — depuis session_state si disponible
+    # Contrôles toujours visibles
+    mc1, mc2, mc4 = st.columns([0.8, 0.35, 0.8])
+    with mc1:
+        metric_choice = st.selectbox("Métrique affichée", [
+            "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
+        ], key="mat_metric")
+    with mc2:
+        st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+        if st.button("Analyser", key="mat_run"):
+            st.session_state["_mat_calc"] = True
+        st.markdown("</div>", unsafe_allow_html=True)
+    with mc4:
+        wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
+    nt_min = 1
+
     if "wr_matrix" in st.session_state:
         labels    = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
         nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
         z_matrix  = pd.DataFrame(st.session_state.get("z_matrix", {}))
 
-        # Contrôles sur une ligne : Métrique | Analyser | espace | Win Rate ≥
-        mc1, mc2, _, mc4 = st.columns([0.8, 0.35, 2.0, 0.8])
-        with mc1:
-            metric_choice = st.selectbox("Métrique affichée", [
-                "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
-            ], key="mat_metric")
-        with mc2:
-            st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-            if st.button("Analyser", key="mat_run"):
-                st.session_state["_mat_calc"] = True
-            st.markdown("</div>", unsafe_allow_html=True)
-        with mc3:
-            pass
-        with mc4:
-            wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
-        nt_min = 1  # fixe
 
         # Construire la matrice de la métrique choisie depuis matrix_results
         # Pour Z-Score, Corrélation, Half-Life, Co-int → depuis matrix_results
