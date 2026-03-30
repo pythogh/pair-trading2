@@ -1057,17 +1057,18 @@ with tab_wr:
             tokens_in_pairs.add(a)
             tokens_in_pairs.add(b)
 
-        # Filtrage itératif : retirer les tokens qui n'ont plus de paire valide après exclusion
-        filtered_labels = [l for l in labels if l in tokens_in_pairs]
-        while True:
-            valid = [
+        # Filtrage itératif strict — ne garder que les tokens avec au moins une paire visible
+        filtered_labels = sorted(tokens_in_pairs, key=lambda x: labels.index(x) if x in labels else 999)
+        changed = True
+        while changed:
+            changed = False
+            new_filtered = [
                 l for l in filtered_labels
-                if any((l, o) in passing_pairs or (o, l) in passing_pairs
-                       for o in filtered_labels if o != l)
+                if sum(1 for o in filtered_labels if o != l and ((l, o) in passing_pairs)) > 0
             ]
-            if valid == filtered_labels:
-                break
-            filtered_labels = valid
+            if new_filtered != filtered_labels:
+                filtered_labels = new_filtered
+                changed = True
 
         def cell_passes(a, b):
             return (a, b) in passing_pairs or (b, a) in passing_pairs
