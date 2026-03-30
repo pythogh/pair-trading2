@@ -403,7 +403,7 @@ for col, info in zip(cols, METRICS_COMPACT):
         st.markdown(
             f"""<div style="border:1.5px dashed #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
-            <p style="font-size:8px;color:#666666;margin:0 0 14px">Seuil : {info['seuil']}</p>
+            <p style="font-size:8px;color:#666666;margin:0 0 12px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
             <p style="font-size:8px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
