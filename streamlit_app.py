@@ -47,7 +47,7 @@ button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !impo
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_DIR    = "data-hourly"
 BARS_PER_DAY = 24
-Z_WINDOW     = 720   # ~30 jours en bougies horaires
+Z_WINDOW     = 336   # ~14 jours en bougies horaires
 HL_MAX_BARS  = 360   # ~15 jours en bougies horaires
 MIN_BARS     = 240   # minimum 10 jours de données
 
@@ -317,14 +317,14 @@ METRICS_COMPACT = [
         "name": "Half-Life",
         "seuil": "5–15 jours (120–360h)",
         "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
-        "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 720h (30j).",
+        "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 336h (14j).",
     },
     {
         "emoji": "🌡️",
         "name": "Z-Score",
         "seuil": "Signal si |z| > 2",
         "formule": "z = (s<sub>t</sub> − μ<sub>30</sub>) / σ<sub>30</sub>",
-        "note": "Fenêtre glissante 30 jours. Un z > +2 se produit ~2.5% du temps — signal de trading.",
+        "note": "Fenêtre glissante 14 jours (336h). Un z > +2 se produit ~2.5% du temps — signal de trading.",
     },
 ]
 
