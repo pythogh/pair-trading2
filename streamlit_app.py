@@ -401,7 +401,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
@@ -1047,7 +1047,7 @@ with tab_wr:
         z_matrix  = pd.DataFrame(st.session_state.get("z_matrix", {}))
 
         # Contrôles sur une ligne : Métrique | Analyser | espace | Win Rate ≥
-        mc1, mc2, mc3, mc4 = st.columns([0.8, 0.35, 0.1, 0.8])
+        mc1, mc2, _, mc4 = st.columns([0.8, 0.35, 2.0, 0.8])
         with mc1:
             metric_choice = st.selectbox("Métrique affichée", [
                 "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
@@ -1189,7 +1189,7 @@ with tab_wr:
                         if metric_choice == "Win Rate":
                             disp_val = wr
                             color_val = wr
-                            cell_text = f"{wr:.0%}{nt_str}"
+                            cell_text = f"{wr:.0%}"
                         elif metric_choice == "Nb Trades":
                             disp_val = nt_val or 0
                             color_val = min((nt_val or 0) / 20.0, 1.0)
