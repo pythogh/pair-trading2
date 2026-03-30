@@ -489,6 +489,86 @@ else:
             hide_index=True,
         )
 
+        # ── Analyse IA ────────────────────────────────────────────────────────
+        valid_pairs = df_tab1[df_tab1["Verdict"] == "✅ Valide"]["Paire"].tolist()
+        if valid_pairs:
+            st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
+            st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 10px;color:#111'>Analyse IA</h2>", unsafe_allow_html=True)
+            ai_c1, ai_c2, _ = st.columns([1.2, 0.4, 2.4])
+            with ai_c1:
+                selected_pair = st.selectbox("Paire à analyser", valid_pairs, key="ai_pair_select", label_visibility="collapsed")
+            with ai_c2:
+                st.markdown("<div style='margin-top:0px'>", unsafe_allow_html=True)
+                run_ai = st.button("✦ Analyser", key="ai_run")
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            if run_ai and selected_pair:
+                pair_data = df_tab1[df_tab1["Paire"] == selected_pair].iloc[0]
+                # Récupérer WR/Sharpe/Trades depuis session_state si disponible
+                wr_info = ""
+                wr_ss = st.session_state.get("wr_matrix")
+                nt_ss = st.session_state.get("nt_matrix")
+                labels_ss = st.session_state.get("wr_labels", [])
+                parts = selected_pair.split(" / ")
+                if len(parts) == 2 and wr_ss:
+                    # Retrouver les labels internes
+                    dn_rev = {dn(l): l for l in labels_ss}
+                    la = dn_rev.get(parts[0])
+                    lb = dn_rev.get(parts[1])
+                    if la and lb:
+                        wr_df = pd.DataFrame(wr_ss)
+                        nt_df = pd.DataFrame(nt_ss) if nt_ss else None
+                        wr_v = wr_df.loc[la, lb] if (la in wr_df.index and lb in wr_df.columns) else None
+                        nt_v = nt_df.loc[la, lb] if (nt_df is not None and la in nt_df.index and lb in nt_df.columns) else None
+                        if wr_v is not None:
+                            try: wr_info = f"- Win Rate backtest : {float(wr_v):.0%}\n- Nombre de trades : {int(float(nt_v)) if nt_v else 'N/A'}"
+                            except: pass
+
+                prompt = f"""Tu es un analyste quant spécialisé en pair trading crypto.
+
+Analyse cette paire et génère un commentaire structuré en 3 paragraphes courts :
+1. Qualité statistique (corrélation, co-intégration, half-life)
+2. Signal actuel (z-score, direction, force du signal)
+3. Recommandation et gestion du risque
+
+Données de la paire {selected_pair} (données horaires, fenêtre 336h) :
+- Corrélation : {pair_data.get('Corrélation', 'N/A')}
+- Co-intégration p-value : {pair_data.get('Co-intégration p', 'N/A')}
+- Half-Life : {pair_data.get('Half-Life', 'N/A')} jours
+- Z-Score actuel : {pair_data.get('Z-Score', 'N/A')}
+- Signal : {pair_data.get('Signal', 'N/A')}
+{wr_info}
+
+Sois précis, factuel et concis. Maximum 180 mots.
+Ne fabrique pas d'informations fondamentales sur les tokens.
+Reste sur l'analyse quantitative de la paire."""
+
+                with st.spinner("Génération de l'analyse…"):
+                    try:
+                        import requests as _req
+                        _resp = _req.post(
+                            "https://api.anthropic.com/v1/messages",
+                            headers={"Content-Type": "application/json"},
+                            json={
+                                "model": "claude-sonnet-4-20250514",
+                                "max_tokens": 400,
+                                "messages": [{"role": "user", "content": prompt}]
+                            },
+                            timeout=30
+                        )
+                        if _resp.status_code == 200:
+                            analysis = _resp.json()["content"][0]["text"]
+                            st.markdown(
+                                f"<div style='background:#fff;border:1px solid #eee;border-radius:10px;padding:18px 20px;margin-top:12px;font-size:13px;line-height:1.7;color:#333'>"
+                                f"<p style='font-size:10px;color:#aaa;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em'>{selected_pair}</p>"
+                                f"{analysis.replace(chr(10), '<br>')}</div>",
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.error(f"Erreur API : {_resp.status_code}")
+                    except Exception as e:
+                        st.error(f"Erreur : {e}")
+
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
 st.markdown("<p style='font-size:11px;color:#888;margin:8px 0 8px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
