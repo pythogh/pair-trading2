@@ -1058,6 +1058,14 @@ with tab_wr:
             st.info("Aucune paire ne dépasse ce seuil.")
             # Debug
             st.caption(f"Debug : {len(labels)} labels, threshold={threshold:.0%}, nt_min={nt_min}, has_nt={has_nt}, wr_matrix shape={wr_matrix.shape if not wr_matrix.empty else 'vide'}")
+            # Montrer quelques valeurs brutes
+            if not wr_matrix.empty and len(labels) >= 2:
+                a, b = labels[0], labels[1]
+                raw = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else "KEY MISSING"
+                st.caption(f"Exemple wr_matrix[{a}][{b}] = {repr(raw)} (type: {type(raw).__name__})")
+                st.caption(f"Index sample: {list(wr_matrix.index[:3])}")
+                st.caption(f"Columns sample: {list(wr_matrix.columns[:3])}")
+                st.caption(f"Labels sample: {labels[:3]}")
         else:
             display_labels = [dn(l) for l in filtered_labels]
             z_vals, text_vals, hover_vals = [], [], []
