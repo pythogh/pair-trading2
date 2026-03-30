@@ -47,6 +47,16 @@ button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !impo
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_DIR = "data"
 
+# ─── TIMEFRAME ─────────────────────────────────────────────────────────────────
+TIMEFRAMES = {
+    "Daily":  {"dir": "data",        "label": "Daily",  "bars_per_day": 1,  "zwindow": 30,  "hl_max": 15,  "min_bars": 40},
+    "Hourly": {"dir": "data-hourly", "label": "Hourly", "bars_per_day": 24, "zwindow": 720, "hl_max": 360, "min_bars": 240},
+}
+
+# Init session state timeframe ici — avant tout appel à st.session_state["timeframe"]
+if "timeframe" not in st.session_state:
+    st.session_state["timeframe"] = "Daily"
+
 def scan_tokens(data_dir):
     files = glob.glob(os.path.join(data_dir, "*-historical-data.csv"))
     tokens = {}
@@ -56,10 +66,11 @@ def scan_tokens(data_dir):
         tokens[label] = slug
     return tokens
 
-CRYPTOS = scan_tokens(TIMEFRAMES[st.session_state["timeframe"]]["dir"])
+_tf_cfg = TIMEFRAMES[st.session_state["timeframe"]]
+CRYPTOS = scan_tokens(_tf_cfg["dir"])
 
 if not CRYPTOS:
-    st.error(f"Aucun fichier trouvé dans `{DATA_DIR}/`. Vérifie que tes CSV sont bien au format `nom-historical-data.csv`.")
+    st.error(f"Aucun fichier trouvé dans `{_tf_cfg['dir']}/`. Vérifie que tes CSV sont bien au format `nom-historical-data.csv`.")
     st.stop()
 
 # ─── COULEURS PAR TOKEN ────────────────────────────────────────────────────────
@@ -71,15 +82,6 @@ TOKEN_COLORS = {
 
 def token_color(name: str) -> str:
     return TOKEN_COLORS.get(name, "#888888")
-
-# ─── TIMEFRAME ─────────────────────────────────────────────────────────────────
-TIMEFRAMES = {
-    "Daily":  {"dir": "data",        "label": "Daily",  "bars_per_day": 1,  "zwindow": 30,  "hl_max": 15,  "min_bars": 40},
-    "Hourly": {"dir": "data-hourly", "label": "Hourly", "bars_per_day": 24, "zwindow": 720, "hl_max": 360, "min_bars": 240},
-}
-
-if "timeframe" not in st.session_state:
-    st.session_state["timeframe"] = "Daily"
 
 # ─── FONCTIONS ─────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
