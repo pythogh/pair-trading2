@@ -1056,26 +1056,29 @@ with tab_wr:
 
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
+            # Debug
+            st.caption(f"Debug : {len(labels)} labels, threshold={threshold:.0%}, nt_min={nt_min}, has_nt={has_nt}, wr_matrix shape={wr_matrix.shape if not wr_matrix.empty else 'vide'}")
         else:
             display_labels = [dn(l) for l in filtered_labels]
             z_vals, text_vals, hover_vals = [], [], []
             for a in filtered_labels:
                 row_z, row_t, row_h = [], [], []
                 for b in filtered_labels:
-                    val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
-                    nt  = nt_matrix.loc[a, b] if (not nt_matrix.empty and a in nt_matrix.index and b in nt_matrix.columns) else None
-                    if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
-                        row_z.append(None)
-                        row_t.append("")
-                        row_h.append("—")
-                    else:
-                        v  = float(val)
-                        nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else None
-                        passes = v >= threshold and (nt_val is not None and nt_val >= nt_min)
-                        nt_str = f"\n{nt_val}T" if nt_val is not None else ""
-                        row_z.append(v if passes else None)
-                        row_t.append(f"{v:.0%}{nt_str}" if passes else "")
-                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {v:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
+                    if a == b:
+                        row_z.append(None); row_t.append(""); row_h.append("—")
+                        continue
+                    val = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
+                    if val is None:
+                        row_z.append(None); row_t.append(""); row_h.append("—")
+                        continue
+                    nt_val = None
+                    if has_nt and a in nt_matrix.index and b in nt_matrix.columns:
+                        nt_val = int(float(nt_matrix.loc[a, b])) if safe_float(nt_matrix.loc[a, b]) is not None else None
+                    passes = cell_passes(a, b)
+                    nt_str = f"\n{nt_val}T" if nt_val is not None else ""
+                    row_z.append(val if passes else None)
+                    row_t.append(f"{val:.0%}{nt_str}" if passes else "")
+                    row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {val:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
