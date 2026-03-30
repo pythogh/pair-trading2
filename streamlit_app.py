@@ -401,7 +401,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
@@ -414,11 +414,7 @@ st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
-_sh1, _sh2 = st.columns([2, 2])
-with _sh1:
-    st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 8px;color:#111'>Signaux actifs</h2>", unsafe_allow_html=True)
-with _sh2:
-    search_paire = st.text_input("", placeholder="🔍 Rechercher une paire...", label_visibility="collapsed", key="search_paire")
+st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 8px;color:#111'>Signaux actifs</h2>", unsafe_allow_html=True)
 filtre = st.radio("", ["Valide uniquement", "Tout"], horizontal=True, label_visibility="collapsed")
 
 if not st.session_state.get("matrix_results"):
@@ -431,8 +427,6 @@ else:
     else:
         df_tab1_signal = df_tab1.copy()
 
-    if search_paire:
-        df_tab1_signal = df_tab1_signal[df_tab1_signal["Paire"].str.contains(search_paire, case=False, na=False)]
 
     df_tab1_signal = df_tab1_signal.sort_values("Verdict").reset_index(drop=True)
 
@@ -1044,13 +1038,40 @@ with tab_wr:
         nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
         z_matrix  = pd.DataFrame(st.session_state.get("z_matrix", {}))
 
-        # Filtres centrés
-        _, f1, f2, _ = st.columns([1, 1.5, 1.5, 1])
-        with f1:
+        # Sélecteur de métrique + filtres sur une ligne
+        mc1, mc2, mc3, mc4 = st.columns([1.2, 1, 1, 1])
+        with mc1:
+            metric_choice = st.selectbox("Métrique affichée", [
+                "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
+            ], key="mat_metric")
+        with mc2:
             wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
-        with f2:
+        with mc3:
             nt_min = st.slider("Trades ≥", 1, 50, 1, 1, key="nt_filter")
+        with mc4:
+            st.markdown("<div style='margin-top:8px;font-size:11px;color:#888'>Filtre sur Win Rate + Trades.<br>Métrique = valeur affichée.</div>", unsafe_allow_html=True)
 
+        # Construire la matrice de la métrique choisie depuis matrix_results
+        # Pour Z-Score, Corrélation, Half-Life, Co-int → depuis matrix_results
+        metric_matrix = pd.DataFrame(index=labels, columns=labels, dtype=object)
+        if metric_choice != "Win Rate" and metric_choice != "Nb Trades":
+            key_map = {
+                "Z-Score":           "Z-Score",
+                "Corrélation":       "Corrélation",
+                "Half-Life (j)":     "Half-Life",
+                "Co-intégration p":  "Co-intégration p",
+            }
+            mr_key = key_map.get(metric_choice)
+            mr = {r["Paire"]: r for r in st.session_state.get("matrix_results", [])}
+            for a in labels:
+                for b in labels:
+                    if a == b:
+                        metric_matrix.loc[a, b] = None
+                        continue
+                    paire_key = f"{dn(a)} / {dn(b)}"
+                    paire_key_rev = f"{dn(b)} / {dn(a)}"
+                    row = mr.get(paire_key) or mr.get(paire_key_rev)
+                    metric_matrix.loc[a, b] = row[mr_key] if row and mr_key in row else None
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
         threshold = wr_min / 100
@@ -1151,9 +1172,35 @@ with tab_wr:
                         row_h.append(f"{dn(a)} / {dn(b)}" + (f"<br>WR : {wr:.0%}" if wr is not None else ""))
                     else:
                         nt_str = f"\n{nt_val}T" if nt_val is not None else ""
-                        row_z.append(wr)
-                        row_t.append(f"{wr:.0%}{nt_str}")
-                        row_h.append(f"<b>{dn(a)} / {dn(b)}</b><br>Win Rate : {wr:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
+                        # Valeur affichée selon métrique choisie
+                        if metric_choice == "Win Rate":
+                            disp_val = wr
+                            color_val = wr
+                            cell_text = f"{wr:.0%}{nt_str}"
+                        elif metric_choice == "Nb Trades":
+                            disp_val = nt_val or 0
+                            color_val = min((nt_val or 0) / 20.0, 1.0)
+                            cell_text = f"{nt_val}T" if nt_val else "—"
+                        else:
+                            raw = safe_float(metric_matrix.loc[a, b] if (a in metric_matrix.index and b in metric_matrix.columns) else None)
+                            disp_val = raw
+                            if metric_choice == "Z-Score":
+                                color_val = min(abs(raw) / 3.0, 1.0) if raw is not None else 0
+                                cell_text = f"{raw:+.2f}" if raw is not None else "—"
+                            elif metric_choice == "Corrélation":
+                                color_val = max(0, (raw - 0.5) / 0.5) if raw is not None else 0
+                                cell_text = f"{raw:.2f}" if raw is not None else "—"
+                            elif metric_choice == "Half-Life (j)":
+                                color_val = max(0, 1 - (raw / 15.0)) if raw is not None and raw != float("inf") else 0
+                                cell_text = f"{raw}j" if raw is not None else "—"
+                            elif metric_choice == "Co-intégration p":
+                                color_val = max(0, 1 - raw / 0.1) if raw is not None else 0
+                                cell_text = f"{raw:.3f}" if raw is not None else "—"
+                            else:
+                                color_val = 0; cell_text = "—"
+                        row_z.append(color_val)
+                        row_t.append(cell_text)
+                        row_h.append(f"<b>{dn(a)} / {dn(b)}</b><br>{metric_choice} : {cell_text}<br>WR : {wr:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
