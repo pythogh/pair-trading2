@@ -588,24 +588,24 @@ with tab_bt:
                 sh_icon    = "▲" if sharpe >= 1 else ("—" if sharpe >= 0 else "▼")
 
                 bt_cards = [
-                    ("P&L cumulé",   f"<span style='color:{pnl_color}'>{pnl_icon} {total_pnl:+.0f}$</span>"),
-                    ("Trades",       f"<span style='color:#333'>{n_trades}</span>"),
-                    ("Win rate",     f"<span style='color:{wr_color}'>{wr_icon} {win_rate:.0%}</span>"),
-                    ("Drawdown max", f"<span style='color:{dd_color}'>▼ {max_dd:.0f}$</span>"),
-                    ("Sharpe",       f"<span style='color:{sh_color}'>{sh_icon} {sharpe:.2f}</span>"),
+                    ("Trades",       str(n_trades),              "#333",     ""),
+                    ("P&L cumulé",   f"{total_pnl:+.0f}$",       pnl_color,  pnl_icon),
+                    ("Win rate",     f"{win_rate:.0%}",           wr_color,   wr_icon),
+                    ("Drawdown max", f"{max_dd:.0f}$",            dd_color,   "▼"),
+                    ("Sharpe",       f"{sharpe:.2f}",             sh_color,   sh_icon),
                 ]
-                st.markdown("<div style='margin:16px 0 6px'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin:20px 0 8px'></div>", unsafe_allow_html=True)
                 bt_cols = st.columns(5)
-                for col, (label, value) in zip(bt_cols, bt_cards):
+                for col, (label, value, color, icon) in zip(bt_cols, bt_cards):
                     with col:
                         st.markdown(
-                            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:12px 14px 10px;">
-                            <p style="font-size:10px;color:#aaa;margin:0 0 6px">{label}</p>
-                            <p style="font-size:20px;font-weight:500;margin:0">{value}</p>
+                            f"""<div style="padding:14px 16px 12px;border-bottom:2px solid {color};">
+                            <p style="font-size:11px;color:#999;margin:0 0 8px;letter-spacing:0.03em;text-transform:uppercase">{label}</p>
+                            <p style="font-size:22px;font-weight:400;margin:0;color:{color};letter-spacing:-0.02em">{"<span style='font-size:14px;margin-right:3px'>"+icon+"</span>" if icon else ""}{value}</p>
                             </div>""",
                             unsafe_allow_html=True
                         )
-                st.markdown("<div style='margin:16px 0 0'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin:20px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
                 with st.expander(f"Détail des {n_trades} trades", expanded=True):
