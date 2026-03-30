@@ -682,11 +682,24 @@ with tab_bt:
                 exit_colors  = ["#E24B4A" if t.startswith("LONG") else "#1D9E75" for t in df_trades["type"]]
                 trade_nums   = list(range(1, n_trades + 1))
 
+                def nearest_val(series, dates):
+                    result = []
+                    for d in dates:
+                        try:
+                            if d in series.index:
+                                result.append(float(series.loc[d]))
+                            else:
+                                idx = series.index.get_indexer([d], method="nearest")[0]
+                                result.append(float(series.iloc[idx]) if idx >= 0 else None)
+                        except Exception:
+                            result.append(None)
+                    return result
+
                 # Prix réels aux dates d'entrée et sortie
-                entry_pa = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in entry_dates]
-                entry_pb = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in entry_dates]
-                exit_pa  = [df_prices.loc[d, "A"] if d in df_prices.index else None for d in exit_dates]
-                exit_pb  = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in exit_dates]
+                entry_pa = nearest_val(df_prices["A"], entry_dates)
+                entry_pb = nearest_val(df_prices["B"], entry_dates)
+                exit_pa  = nearest_val(df_prices["A"], exit_dates)
+                exit_pb  = nearest_val(df_prices["B"], exit_dates)
 
                 entry_hover = [
                     f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d %H:%M')}<br>"
@@ -727,8 +740,23 @@ with tab_bt:
             ))
 
             if trades:
-                entry_y_a = [df["A"].loc[d] if d in df.index else None for d in entry_dates]
-                exit_y_a  = [df["A"].loc[d] if d in df.index else None for d in exit_dates]
+                def nearest_price(df_col, dates):
+                    """Trouve le prix au timestamp le plus proche pour chaque date de trade."""
+                    result = []
+                    for d in dates:
+                        try:
+                            # Cherche le timestamp exact, sinon le plus proche
+                            if d in df_col.index:
+                                result.append(float(df_col.loc[d]))
+                            else:
+                                idx = df_col.index.get_indexer([d], method="nearest")[0]
+                                result.append(float(df_col.iloc[idx]) if idx >= 0 else None)
+                        except Exception:
+                            result.append(None)
+                    return result
+
+                entry_y_a = nearest_price(df["A"], entry_dates)
+                exit_y_a  = nearest_price(df["A"], exit_dates)
 
                 fig.add_trace(go.Scatter(
                     x=entry_dates, y=entry_y_a, mode="markers+text", name="Entrée",
@@ -787,8 +815,8 @@ with tab_bt:
             fig2.add_hline(y=0, line_color="rgba(180,180,180,0.6)", line_width=1, line_dash="dot")
 
             if trades:
-                entry_z_vals = [z_score_series.loc[d] if d in z_score_series.index else None for d in entry_dates]
-                exit_z_vals  = [z_score_series.loc[d] if d in z_score_series.index else None for d in exit_dates]
+                entry_z_vals = nearest_val(z_score_series, entry_dates)
+                exit_z_vals  = nearest_val(z_score_series, exit_dates)
 
                 fig2.add_trace(go.Scatter(
                     x=entry_dates, y=entry_z_vals, mode="markers+text", name="Entrée",
