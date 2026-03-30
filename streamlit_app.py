@@ -509,8 +509,6 @@ st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
-    st.caption("Capital par défaut : 1 000 $")
-
     keys = list(CRYPTOS.keys())
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
