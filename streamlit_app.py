@@ -23,9 +23,7 @@ html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, i
     -webkit-font-smoothing: antialiased !important;
 }
 .stApp { background: #f9f7f4 !important; }
-[data-testid="stDataFrame"] { background: #ffffff !important; border-radius: 8px !important; }
-[data-testid="stDataFrame"] > div > div > div { background: #ffffff !important; }
-.dvn-scroller { background: #ffffff !important; }
+
 .block-container { background: #f9f7f4 !important; }
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
@@ -35,9 +33,6 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 
 /* ── Dividers ── */
 hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 1rem 0 !important; }
-[data-testid="stDataFrame"] * { font-family: 'Inter', -apple-system, sans-serif !important; font-size: 12px !important; }
-[data-testid="stDataFrame"] { background: #ffffff !important; }
-.dvn-scroller, .dvn-scroller * { background: #ffffff !important; }
 
 /* ── Boutons ── */
 .stButton > button {
