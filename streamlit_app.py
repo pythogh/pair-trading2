@@ -1022,7 +1022,7 @@ with tab_wr:
         with f1:
             wr_min = st.slider("Win Rate ≥", 0, 100, 80, 5, format="%d%%", key="wr_filter")
         with f2:
-            nt_min = st.slider("Trades ≥", 1, 50, 3, 1, key="nt_filter")
+            nt_min = st.slider("Trades ≥", 1, 50, 1, 1, key="nt_filter")
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
         threshold = wr_min / 100
@@ -1056,16 +1056,6 @@ with tab_wr:
 
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
-            st.caption(f"Debug : {len(labels)} labels, threshold={threshold:.0%}, nt_min={nt_min}, has_nt={has_nt}, wr_matrix shape={wr_matrix.shape if not wr_matrix.empty else 'vide'}")
-            if not wr_matrix.empty and len(labels) >= 2:
-                a, b = labels[0], labels[1]
-                raw = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else "KEY MISSING"
-                sf = safe_float(raw)
-                cp = cell_passes(a, b)
-                nt_raw = nt_matrix.loc[a, b] if (has_nt and a in nt_matrix.index and b in nt_matrix.columns) else "n/a"
-                st.caption(f"wr[{a}][{b}] = {repr(raw)} → safe_float={sf} → cell_passes={cp}")
-                st.caption(f"nt[{a}][{b}] = {repr(nt_raw)}")
-                st.caption(f"threshold={threshold}, nt_min={nt_min}")
         else:
             display_labels = [dn(l) for l in filtered_labels]
             z_vals, text_vals, hover_vals = [], [], []
