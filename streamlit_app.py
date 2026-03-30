@@ -855,12 +855,14 @@ with tab_wr:
             price_cache[name], _ = fetch_prices(CRYPTOS[name])
 
         wr_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
+        nt_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
         total_pairs = n * (n - 1) // 2
         done = 0
         for i, a in enumerate(all_names):
             for j, b in enumerate(all_names):
                 if i >= j:
                     wr_matrix.loc[a, b] = None
+                    nt_matrix.loc[a, b] = None
                     continue
                 done += 1
                 bar.progress(done / total_pairs, text=f"{dn(a)} / {dn(b)}…")
@@ -869,11 +871,15 @@ with tab_wr:
                 if sa is None or sb is None:
                     wr_matrix.loc[a, b] = None
                     wr_matrix.loc[b, a] = None
+                    nt_matrix.loc[a, b] = None
+                    nt_matrix.loc[b, a] = None
                     continue
                 m_pair = compute_metrics(sa, sb, a, b)
                 if m_pair is None:
                     wr_matrix.loc[a, b] = None
                     wr_matrix.loc[b, a] = None
+                    nt_matrix.loc[a, b] = None
+                    nt_matrix.loc[b, a] = None
                     continue
 
                 z_s = m_pair["z_score"].dropna()
@@ -914,14 +920,19 @@ with tab_wr:
                 if not trades_p:
                     wr_matrix.loc[a, b] = None
                     wr_matrix.loc[b, a] = None
+                    nt_matrix.loc[a, b] = None
+                    nt_matrix.loc[b, a] = None
                 else:
                     wr = sum(1 for p in trades_p if p > 0) / len(trades_p)
                     wr_matrix.loc[a, b] = wr
                     wr_matrix.loc[b, a] = wr
+                    nt_matrix.loc[a, b] = len(trades_p)
+                    nt_matrix.loc[b, a] = len(trades_p)
 
         _progress_container.empty()
         # Stocker en session_state pour persistance + signature des paramètres
         st.session_state["wr_matrix"] = wr_matrix.to_dict()
+        st.session_state["nt_matrix"] = nt_matrix.to_dict()
         st.session_state["wr_labels"] = all_names
         st.session_state["wr_params"] = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
 
@@ -934,6 +945,7 @@ with tab_wr:
     if "wr_matrix" in st.session_state:
         labels = st.session_state["wr_labels"]
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
+        nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
 
         # Filtre sur le Win Rate — réduit la matrice
         wr_min = st.slider("Afficher uniquement les paires avec Win Rate ≥", 0, 100, 80, 5, format="%d%%")
@@ -962,21 +974,24 @@ with tab_wr:
                 row_z, row_t, row_h = [], [], []
                 for b in filtered_labels:
                     val = wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None
+                    nt  = nt_matrix.loc[a, b] if (not nt_matrix.empty and a in nt_matrix.index and b in nt_matrix.columns) else None
                     if a == b or val is None or (isinstance(val, float) and pd.isna(val)):
                         row_z.append(None)
                         row_t.append("")
                         row_h.append("—")
                     else:
-                        v = float(val)
+                        v  = float(val)
+                        nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else None
+                        nt_str = f"\n{nt_val}T" if nt_val is not None else ""
                         row_z.append(v if v >= threshold else None)
-                        row_t.append(f"{v:.0%}" if v >= threshold else "")
-                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {v:.0%}")
+                        row_t.append(f"{v:.0%}{nt_str}" if v >= threshold else "")
+                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {v:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
 
             n = len(filtered_labels)
-            cell_size = 44
+            cell_size = 54
             matrix_px = n * cell_size + 160
 
             fig_wr = go.Figure(go.Heatmap(
