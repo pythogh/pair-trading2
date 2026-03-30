@@ -920,6 +920,7 @@ with tab_bt:
 with tab_wr:
 
     if st.session_state.get("_mat_calc"):
+        st.session_state.pop("_mat_calc", None)  # clear immédiatement
         all_names = list(CRYPTOS.keys())
         n = len(all_names)
 
@@ -1025,7 +1026,6 @@ with tab_wr:
         st.session_state["z_matrix"]  = z_matrix.to_dict()
         st.session_state["wr_labels"] = all_names
         st.session_state["wr_params"] = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
-        st.session_state.pop("_mat_calc", None)
 
     # Avertissement si paramètres changés depuis le dernier calcul
     if "wr_matrix" in st.session_state:
