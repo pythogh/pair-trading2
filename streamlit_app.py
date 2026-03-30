@@ -689,17 +689,22 @@ with tab_bt:
                 exit_pb  = [df_prices.loc[d, "B"] if d in df_prices.index else None for d in exit_dates]
 
                 entry_hover = [
-                    f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
+                    f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d %H:%M')}<br>"
                     f"{dn(name_a)} : {pa:.4f}$<br>{dn(name_b)} : {pb:.4f}$<br>z : {ze:.2f}"
+                    if pa is not None and pb is not None else
+                    f"<b>Trade #{n} — Entrée</b><br>{t}<br>Date : {d.strftime('%Y-%m-%d %H:%M')}<br>z : {ze:.2f}"
                     for n, t, d, pa, pb, ze in zip(
                         trade_nums, df_trades["type"], entry_dates,
                         entry_pa, entry_pb, df_trades["z entrée"]
                     )
                 ]
                 exit_hover = [
-                    f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d')}<br>"
+                    f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d %H:%M')}<br>"
                     f"{dn(name_a)} : {pa:.4f}$<br>{dn(name_b)} : {pb:.4f}$<br>z : {zs:.2f}<br>"
                     f"P&L : <b>{pnl:+.2f}$</b>"
+                    if pa is not None and pb is not None else
+                    f"<b>Trade #{n} — Sortie</b><br>{r}<br>Date : {d.strftime('%Y-%m-%d %H:%M')}<br>"
+                    f"z : {zs:.2f}<br>P&L : <b>{pnl:+.2f}$</b>"
                     for n, r, d, pa, pb, zs, pnl in zip(
                         trade_nums, df_trades["raison"], exit_dates,
                         exit_pa, exit_pb, df_trades["z sortie"], df_trades["P&L ($)"]
