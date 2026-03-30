@@ -401,7 +401,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div style="border:1.5px dashed #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
@@ -919,7 +919,15 @@ with tab_bt:
 
 with tab_wr:
 
-    if st.button("Calculer la matrice", use_container_width=False):
+    _run_calc = False
+
+    if False: pass  # placeholder — button moved below filters
+
+    if st.session_state.get("_do_calc"):
+        st.session_state["_do_calc"] = False
+        _run_calc = True
+
+    if _run_calc:
         all_names = list(CRYPTOS.keys())
         n = len(all_names)
 
@@ -1038,18 +1046,23 @@ with tab_wr:
         nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
         z_matrix  = pd.DataFrame(st.session_state.get("z_matrix", {}))
 
-        # Sélecteur de métrique + filtres sur une ligne
-        mc1, mc2, mc3, mc4 = st.columns([1.2, 1, 1, 1])
+        # Contrôles sur une ligne : Métrique | Analyser | espace | Win Rate ≥
+        mc1, mc2, mc3, mc4 = st.columns([0.8, 0.35, 0.1, 0.8])
         with mc1:
             metric_choice = st.selectbox("Métrique affichée", [
                 "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
             ], key="mat_metric")
         with mc2:
-            wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
+            st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+            if st.button("Analyser", key="mat_run"):
+                st.session_state["_do_calc"] = True
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
         with mc3:
-            nt_min = st.slider("Trades ≥", 1, 50, 1, 1, key="nt_filter")
+            pass
         with mc4:
-            st.markdown("<div style='margin-top:8px;font-size:11px;color:#888'>Filtre sur Win Rate + Trades.<br>Métrique = valeur affichée.</div>", unsafe_allow_html=True)
+            wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
+        nt_min = 1  # fixe
 
         # Construire la matrice de la métrique choisie depuis matrix_results
         # Pour Z-Score, Corrélation, Half-Life, Co-int → depuis matrix_results
