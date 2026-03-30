@@ -22,9 +22,9 @@ html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, i
     font-size: 13px !important;
     -webkit-font-smoothing: antialiased !important;
 }
-.stApp { background: #fdfcfb !important; }
+.stApp { background: #fefefe !important; }
 
-.block-container { background: #fdfcfb !important; }
+.block-container { background: #fefefe !important; }
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
 /* ── Titre ── */
@@ -509,7 +509,7 @@ st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
+tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", " "])
 
 with tab_bt:
 
@@ -917,7 +917,6 @@ with tab_bt:
             st.plotly_chart(fig2, use_container_width=True)
 
 with tab_wr:
-    st.caption("Win rate de chaque paire calculé avec les paramètres backtest actuels.")
 
     if st.button("Calculer la matrice", use_container_width=False):
         all_names = list(CRYPTOS.keys())
@@ -1176,21 +1175,21 @@ with tab_wr:
                 hover_vals.append(row_h)
 
             n = len(filtered_labels)
-            cell_size = 54
-            matrix_px = n * cell_size + 160
+            cell_size = 70
+            matrix_px = n * cell_size + 180
 
             fig_wr = go.Figure(go.Heatmap(
                 z=z_vals, x=display_labels, y=display_labels,
                 text=text_vals, hovertext=hover_vals,
                 hovertemplate="%{hovertext}<extra></extra>",
                 texttemplate="%{text}",
-                textfont=dict(size=9),
+                textfont=dict(size=11),
                 colorscale=[
                     [0.0,  "#f8f8f8"],
-                    [0.01, "#e8f3ff"],
-                    [0.4,  "#93c5fd"],
-                    [0.7,  "#3b82f6"],
-                    [1.0,  "#1e3a8a"],
+                    [0.01, "#e8f7f1"],
+                    [0.4,  "#6ee7b7"],
+                    [0.7,  "#10b981"],
+                    [1.0,  "#064e3b"],
                 ],
                 zmin=0, zmax=1, showscale=False,
             ))
@@ -1207,8 +1206,8 @@ with tab_wr:
                 margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 shapes=grid_shapes,
-                xaxis=dict(tickfont=dict(size=10), side="top", showgrid=False, tickangle=-90),
-                yaxis=dict(tickfont=dict(size=10), autorange="reversed", showgrid=False),
+                xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90),
+                yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False),
             )
 
             # Clic sur une cellule → prefill backtest
@@ -1216,23 +1215,7 @@ with tab_wr:
             with col_center:
                 sel = st.plotly_chart(fig_wr, use_container_width=False, key="wr_heatmap")
 
-            # Sélection manuelle de paire → Backtest
-            if filtered_labels:
-                st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
-                sc1, sc2, sc3, _ = st.columns([1, 1, 0.5, 2])
-                with sc1:
-                    sel_a = st.selectbox("Token A", [dn(l) for l in filtered_labels], key="mat_sel_a")
-                with sc2:
-                    others = [dn(l) for l in filtered_labels if dn(l) != sel_a]
-                    sel_b = st.selectbox("Token B", others, key="mat_sel_b")
-                with sc3:
-                    st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-                    if st.button("→ Backtest", key="mat_goto_bt"):
-                        dn_to_label = {dn(l): l for l in filtered_labels}
-                        st.session_state.prefill_a = dn_to_label.get(sel_a)
-                        st.session_state.prefill_b = dn_to_label.get(sel_b)
-                        st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
+
 
 with tab_logo:
     st.caption("Test de récupération des logos CoinMarketCap.")
