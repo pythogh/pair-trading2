@@ -15,16 +15,16 @@ st.set_page_config(page_title="Pair Trading", layout="wide")
 st.markdown("""
 <style>
 html, body, [class*="css"] { font-size: 13px !important; }
-h1 { font-size: 17px !important; font-weight: 500 !important; }
+h1 { font-size: 17px !important; font-weight: 400 !important; letter-spacing: -0.02em !important; }
 h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
 [data-testid="stSidebar"] { background-color: #fafaf8 !important; min-width: 200px !important; max-width: 200px !important; }
 [data-testid="stSidebar"] label { font-size: 11px !important; color: #888 !important; }
-.stButton > button { background: #1a1a1a !important; color: #fff !important; border: none !important; border-radius: 6px !important; font-size: 12px !important; height: 32px !important; }
+.stButton > button { background: #1a1a1a !important; color: #fff !important; border: none !important; border-radius: 6px !important; font-size: 12px !important; height: 32px !important; letter-spacing: 0.01em !important; }
 .stButton > button:hover { background: #333 !important; }
-[data-testid="metric-container"] { background: #f7f6f3 !important; border-radius: 8px !important; padding: 10px 14px !important; border: none !important; }
-[data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; }
-[data-testid="stMetricValue"] { font-size: 20px !important; font-weight: 500 !important; }
+[data-testid="metric-container"] { background: transparent !important; border-radius: 0 !important; padding: 10px 0 !important; border: none !important; border-bottom: 2px solid #e8e8e6 !important; }
+[data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; }
+[data-testid="stMetricValue"] { font-size: 22px !important; font-weight: 400 !important; }
 [data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
 [data-testid="stSelectbox"] > div > div { min-height: 32px !important; font-size: 12px !important; }
 [data-testid="stNumberInput"] input { height: 32px !important; font-size: 12px !important; padding: 4px 8px !important; }
@@ -33,14 +33,9 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 [data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
 button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !important; margin-right: 4px !important; }
 .stApp { background-color: #ffffff !important; }
-/* Logos ronds dans les tableaux */
 [data-testid="stDataFrame"] img { border-radius: 50% !important; }
-/* Bordure pointillés + espacement uniforme sur les graphes Plotly */
-[data-testid="stPlotlyChart"],
-[data-testid="stPlotlyChart"] > div,
-.stPlotlyChart {
-    margin-bottom: 24px !important;
-}
+[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] > div, .stPlotlyChart { margin-bottom: 24px !important; }
+hr { border: none !important; border-top: 1px solid #f0f0f0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -332,11 +327,10 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 14px 14px;height:150px;display:flex;flex-direction:column;">
-            <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
-            <p style="font-size:10px;color:#aaa;margin:0 0 8px">Seuil : {info['seuil']}</p>
-            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 8px;color:#333">{info['formule']}</p>
-            <p style="font-size:11px;color:#888;line-height:1.4;margin:0">{info['note']}</p>
+            f"""<div style="padding:14px 16px 12px;border-bottom:2px solid #e8e8e6;">
+            <p style="font-size:10px;color:#999;margin:0 0 10px;letter-spacing:0.04em;text-transform:uppercase">{info['name']}</p>
+            <p style="font-size:11px;color:#bbb;margin:0 0 8px;font-family:Georgia,serif">{info['formule']}</p>
+            <p style="font-size:10px;color:#ccc;margin:0">seuil : {info['seuil']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -825,8 +819,6 @@ with tab_bt:
                 dict(type="line", xref="paper", yref="y", x0=0, x1=1,
                      y0=0, y1=0,
                      line=dict(color="rgba(180,180,180,0.5)", width=1, dash="dot")),
-                dict(type="rect", xref="paper", yref="paper", x0=0, y0=0, x1=1, y1=1,
-                     line=dict(color="#ccc", width=1, dash="dot"), fillcolor="rgba(0,0,0,0)"),
             ]
             fig2.update_layout(
                 title=dict(text="Z-Score — signal de trading", font=dict(size=12)),
