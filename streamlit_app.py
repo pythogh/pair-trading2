@@ -399,14 +399,16 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 14px 14px;height:150px;display:flex;flex-direction:column;">
-            <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
-            <p style="font-size:10px;color:#aaa;margin:0 0 8px">Seuil : {info['seuil']}</p>
-            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 8px;color:#333">{info['formule']}</p>
-            <p style="font-size:11px;color:#888;line-height:1.4;margin:0">{info['note']}</p>
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:16px 16px 14px;height:170px;display:flex;flex-direction:column;box-sizing:border-box;">
+            <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 12px">Seuil : {info['seuil']}</p>
+            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 12px;color:#333;flex-shrink:0">{info['formule']}</p>
+            <p style="font-size:10.5px;color:#999;line-height:1.45;margin:0;flex:1;overflow:hidden">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
+
+st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
