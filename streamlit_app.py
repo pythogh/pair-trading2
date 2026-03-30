@@ -26,7 +26,7 @@ html, body, [class*="css"], .stMarkdown, .stText, p, span, div {
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
 /* ── Titre ── */
-h1 { font-size: 18px !important; font-weight: 400 !important; letter-spacing: -0.03em !important; color: #111 !important; }
+h1 { font-size: 24px !important; font-weight: 400 !important; letter-spacing: -0.03em !important; color: #111 !important; }
 h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 
 /* ── Dividers ── */
@@ -233,7 +233,7 @@ def compute_metrics(series_a, series_b, name_a, name_b):
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
 st.title("📈 Pair Trading Analyzer")
-st.caption(f"Données horaires · {len(CRYPTOS)} tokens · dossier `{DATA_DIR}/`")
+st.markdown(f"<p style='font-size:12px;color:#666;margin:2px 0 0'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#f0f0ee;padding:1px 4px;border-radius:3px;font-size:11px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
 if "prefill_a" not in st.session_state:
@@ -399,11 +399,11 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:16px 16px 14px;height:170px;display:flex;flex-direction:column;box-sizing:border-box;">
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:200px;display:flex;flex-direction:column;box-sizing:border-box;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
-            <p style="font-size:10px;color:#aaa;margin:0 0 12px">Seuil : {info['seuil']}</p>
-            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 12px;color:#333;flex-shrink:0">{info['formule']}</p>
-            <p style="font-size:10.5px;color:#999;line-height:1.45;margin:0;flex:1;overflow:hidden">{info['note']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
+            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
+            <p style="font-size:10px;color:#aaa;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -487,7 +487,7 @@ else:
 
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
-st.markdown("<p style='font-size:11px;color:#aaa;margin:8px 0 4px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:11px;color:#888;margin:8px 0 8px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
 gp1, gp2, gp3, gp4 = st.columns([0.4, 0.4, 0.4, 0.4])
 with gp1:
     entry_z = st.number_input("Entrée z", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
@@ -502,8 +502,10 @@ with gp4:
 ts_start = pd.Timestamp.min
 ts_end   = pd.Timestamp.max
 
+st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
+
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
-st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
@@ -1015,8 +1017,8 @@ with tab_wr:
         wr_matrix = pd.DataFrame(st.session_state["wr_matrix"])
         nt_matrix = pd.DataFrame(st.session_state.get("nt_matrix", {}))
 
-        # Filtres
-        f1, f2, _ = st.columns([1, 1, 2])
+        # Filtres centrés
+        _, f1, f2, _ = st.columns([1, 1.5, 1.5, 1])
         with f1:
             wr_min = st.slider("Win Rate ≥", 0, 100, 80, 5, format="%d%%", key="wr_filter")
         with f2:
@@ -1039,6 +1041,22 @@ with tab_wr:
                     tokens_to_keep.add(b)
 
         filtered_labels = [l for l in labels if l in tokens_to_keep]
+
+        # Supprimer aussi les tokens dont toutes les paires restantes sont vides après filtre
+        def has_visible_pair(token, all_filtered):
+            for other in all_filtered:
+                if other == token:
+                    continue
+                val = wr_matrix.loc[token, other] if (token in wr_matrix.index and other in wr_matrix.columns) else None
+                nt  = nt_matrix.loc[token, other] if (not nt_matrix.empty and token in nt_matrix.index and other in nt_matrix.columns) else None
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    continue
+                nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else 0
+                if float(val) >= threshold and nt_val >= nt_min:
+                    return True
+            return False
+
+        filtered_labels = [l for l in filtered_labels if has_visible_pair(l, filtered_labels)]
 
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
