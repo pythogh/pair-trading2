@@ -1041,9 +1041,14 @@ with tab_wr:
         # Filtres centrés
         _, f1, f2, _ = st.columns([1, 1.5, 1.5, 1])
         with f1:
-            wr_min = st.slider("Win Rate ≥", 0, 100, 80, 5, format="%d%%", key="wr_filter")
+            wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
         with f2:
             nt_min = st.slider("Trades ≥", 1, 50, 1, 1, key="nt_filter")
+
+        # Filtre Z-Score additionnel
+        _, fz, _ = st.columns([1, 3, 1])
+        with fz:
+            z_filter = st.slider("|Z-Score| actuel ≥", 0.0, 4.0, 0.0, 0.1, format="%.1f", key="z_filter")
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
         threshold = wr_min / 100
@@ -1068,6 +1073,10 @@ with tab_wr:
                     nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
                     nt_val = int(nt) if nt is not None else 0
                     if nt_val < nt_min:
+                        continue
+                if z_filter > 0 and not z_matrix.empty:
+                    zscore = safe_float(z_matrix.loc[a, b] if (a in z_matrix.index and b in z_matrix.columns) else None)
+                    if zscore is None or abs(zscore) < z_filter:
                         continue
                 passing_pairs.add((a, b))
                 passing_pairs.add((b, a))
@@ -1205,28 +1214,25 @@ with tab_wr:
             # Clic sur une cellule → prefill backtest
             _, col_center, _ = st.columns([1, matrix_px // 10, 1])
             with col_center:
-                sel = st.plotly_chart(fig_wr, use_container_width=False,
-                                         on_select="rerun", selection_mode="points", key="wr_heatmap")
+                sel = st.plotly_chart(fig_wr, use_container_width=False, key="wr_heatmap")
 
-            # Lecture du clic depuis session_state
-            sel_data = st.session_state.get("wr_heatmap", {})
-            points = sel_data.get("selection", {}).get("points", []) if isinstance(sel_data, dict) else []
-            if not points:
-                # Essai direct sur la valeur retournée
-                try:
-                    points = sel.get("selection", {}).get("points", [])
-                except: points = []
-            if points:
-                pt = points[0]
-                x_label = pt.get("x")
-                y_label = pt.get("y")
-                dn_to_label = {dn(l): l for l in filtered_labels}
-                token_a = dn_to_label.get(str(y_label))
-                token_b = dn_to_label.get(str(x_label))
-                if token_a and token_b and token_a != token_b:
-                    st.session_state.prefill_a = token_a
-                    st.session_state.prefill_b = token_b
-                    st.success(f"✓ **{y_label} / {x_label}** sélectionnés — ouvre l'onglet Backtest")
+            # Sélection manuelle de paire → Backtest
+            if filtered_labels:
+                st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
+                sc1, sc2, sc3, _ = st.columns([1, 1, 0.5, 2])
+                with sc1:
+                    sel_a = st.selectbox("Token A", [dn(l) for l in filtered_labels], key="mat_sel_a")
+                with sc2:
+                    others = [dn(l) for l in filtered_labels if dn(l) != sel_a]
+                    sel_b = st.selectbox("Token B", others, key="mat_sel_b")
+                with sc3:
+                    st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+                    if st.button("→ Backtest", key="mat_goto_bt"):
+                        dn_to_label = {dn(l): l for l in filtered_labels}
+                        st.session_state.prefill_a = dn_to_label.get(sel_a)
+                        st.session_state.prefill_b = dn_to_label.get(sel_b)
+                        st.rerun()
+                    st.markdown("</div>", unsafe_allow_html=True)
 
 with tab_logo:
     st.caption("Test de récupération des logos CoinMarketCap.")
