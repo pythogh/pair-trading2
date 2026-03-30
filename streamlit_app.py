@@ -234,7 +234,7 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     }
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
-st.markdown(f"<h1 style='font-size:28px;font-weight:500;letter-spacing:-0.03em;margin:0 0 6px;color:#111'>📈 Pair Trading Analyzer</h1>", unsafe_allow_html=True)
+
 st.markdown(f"<p style='font-size:11px;color:#888;margin:0 0 24px'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#f0f0ee;padding:1px 4px;border-radius:3px;font-size:10px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
@@ -1044,10 +1044,6 @@ with tab_wr:
         with f2:
             nt_min = st.slider("Trades ≥", 1, 50, 1, 1, key="nt_filter")
 
-        # Filtre Z-Score additionnel
-        _, fz, _ = st.columns([1, 3, 1])
-        with fz:
-            z_filter = st.slider("|Z-Score| actuel ≥", 0.0, 4.0, 0.0, 0.1, format="%.1f", key="z_filter")
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
         threshold = wr_min / 100
@@ -1073,10 +1069,7 @@ with tab_wr:
                     nt_val = int(nt) if nt is not None else 0
                     if nt_val < nt_min:
                         continue
-                if z_filter > 0 and not z_matrix.empty:
-                    zscore = safe_float(z_matrix.loc[a, b] if (a in z_matrix.index and b in z_matrix.columns) else None)
-                    if zscore is None or abs(zscore) < z_filter:
-                        continue
+
                 passing_pairs.add((a, b))
                 passing_pairs.add((b, a))
 
@@ -1148,28 +1141,12 @@ with tab_wr:
                     if not passes or wr is None:
                         row_z.append(None)
                         row_t.append("")
-                        hover = f"{dn(a)} / {dn(b)}"
-                        if wr is not None:
-                            hover += f"<br>WR : {wr:.0%}"
-                        row_h.append(hover)
-                    elif zscore is None:
-                        # WR passe mais pas de z-score — affiche juste WR
-                        row_z.append(0.3)
-                        row_t.append("")
-                        row_h.append(f"<b>{dn(a)} / {dn(b)}</b><br>Win Rate : {wr:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else "") + "<br><i>Clic → Backtest</i>")
+                        row_h.append(f"{dn(a)} / {dn(b)}" + (f"<br>WR : {wr:.0%}" if wr is not None else ""))
                     else:
-                        abs_z = abs(zscore)
-                        color_val = min(abs_z / 3.0, 1.0)
-                        signal_icon = "↑" if zscore > 0 else "↓"
-                        row_z.append(color_val)
-                        row_t.append(f"{zscore:+.1f}{signal_icon}")
-                        row_h.append(
-                            f"<b>{dn(a)} / {dn(b)}</b><br>"
-                            f"Z-Score : <b>{zscore:+.2f}</b> {signal_icon}<br>"
-                            f"Win Rate : {wr:.0%}" +
-                            (f"<br>Trades : {nt_val}" if nt_val else "") +
-                            "<br><i>Clic → Backtest</i>"
-                        )
+                        nt_str = f"\n{nt_val}T" if nt_val is not None else ""
+                        row_z.append(wr)
+                        row_t.append(f"{wr:.0%}{nt_str}")
+                        row_h.append(f"<b>{dn(a)} / {dn(b)}</b><br>Win Rate : {wr:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
@@ -1185,11 +1162,10 @@ with tab_wr:
                 texttemplate="%{text}",
                 textfont=dict(size=11),
                 colorscale=[
-                    [0.0,  "#f8f8f8"],
-                    [0.01, "#e8f7f1"],
-                    [0.4,  "#6ee7b7"],
-                    [0.7,  "#10b981"],
-                    [1.0,  "#064e3b"],
+                    [0.0,  "#fdf0f0"],
+                    [0.4,  "#fef3e2"],
+                    [0.6,  "#e8f7f1"],
+                    [1.0,  "#0F6E56"],
                 ],
                 zmin=0, zmax=1, showscale=False,
             ))
