@@ -232,7 +232,7 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     }
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
-st.markdown(f"<h1 style='font-size:22px;font-weight:500;letter-spacing:-0.02em;margin:0 0 6px;color:#111'>📈 Pair Trading Analyzer</h1>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='font-size:28px;font-weight:500;letter-spacing:-0.03em;margin:0 0 6px;color:#111'>📈 Pair Trading Analyzer</h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='font-size:11px;color:#888;margin:0 0 24px'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#f0f0ee;padding:1px 4px;border-radius:3px;font-size:10px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
@@ -403,7 +403,7 @@ for col, info in zip(cols, METRICS_COMPACT):
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
-            <p style="font-size:8px;color:#bbb;line-height:1.5;margin:0;flex:1">{info['note']}</p>
+            <p style="font-size:9px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -680,53 +680,53 @@ with tab_bt:
                 st.markdown("<div style='margin:20px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
-                with st.expander(f"Détail des {n_trades} trades", expanded=True):
-                    st.markdown(
-                        f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
-                        f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
-                        f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
-                        f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
-                        unsafe_allow_html=True
-                    )
-                    df_display = df_trades.copy()
-                    df_display["type"] = df_display["type"].apply(lambda t:
-                        t.replace(f"LONG {dn(name_a)}", f"↑ {dn(name_a)}")
-                         .replace(f"SHORT {dn(name_a)}", f"↓ {dn(name_a)}")
-                         .replace(f"LONG {dn(name_b)}", f"↑ {dn(name_b)}")
-                         .replace(f"SHORT {dn(name_b)}", f"↓ {dn(name_b)}")
-                    )
-                    def _row_color(row):
-                        try:
-                            v = float(row["P&L ($)"])
-                            if v > 0: return ["background-color:#e8f7f1;color:#0F6E56"] * len(row)
-                            if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
-                        except: pass
-                        return [""] * len(row)
+                st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des {n_trades} trades</p>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
+                    f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
+                    f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
+                    f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
+                    unsafe_allow_html=True
+                )
+                df_display = df_trades.copy()
+                df_display["type"] = df_display["type"].apply(lambda t:
+                    t.replace(f"LONG {dn(name_a)}", f"↑ {dn(name_a)}")
+                     .replace(f"SHORT {dn(name_a)}", f"↓ {dn(name_a)}")
+                     .replace(f"LONG {dn(name_b)}", f"↑ {dn(name_b)}")
+                     .replace(f"SHORT {dn(name_b)}", f"↓ {dn(name_b)}")
+                )
+                def _row_color(row):
+                    try:
+                        v = float(row["P&L ($)"])
+                        if v > 0: return ["background-color:#e8f7f1;color:#0F6E56"] * len(row)
+                        if v < 0: return ["background-color:#fdf0f0;color:#A32D2D"] * len(row)
+                    except: pass
+                    return [""] * len(row)
 
-                    pnl_a_col = f"P&L {dn(name_a)} ($)"
-                    pnl_b_col = f"P&L {dn(name_b)} ($)"
+                pnl_a_col = f"P&L {dn(name_a)} ($)"
+                pnl_b_col = f"P&L {dn(name_b)} ($)"
 
-                    def _color_pnl_leg(val):
-                        try:
-                            v = float(val)
-                            if v > 0: return "color:#0F6E56;font-weight:700"
-                            if v < 0: return "color:#A32D2D;font-weight:700"
-                        except: pass
-                        return "font-weight:700"
+                def _color_pnl_leg(val):
+                    try:
+                        v = float(val)
+                        if v > 0: return "color:#0F6E56;font-weight:700"
+                        if v < 0: return "color:#A32D2D;font-weight:700"
+                    except: pass
+                    return "font-weight:700"
 
-                    def _fmt_pnl(v):
-                        try: return f"{float(v):+.2f}$"
-                        except: return v
+                def _fmt_pnl(v):
+                    try: return f"{float(v):+.2f}$"
+                    except: return v
 
-                    fmt_dict = {"P&L ($)": _fmt_pnl}
-                    if pnl_a_col in df_display.columns:
-                        fmt_dict[pnl_a_col] = _fmt_pnl
-                        fmt_dict[pnl_b_col] = _fmt_pnl
+                fmt_dict = {"P&L ($)": _fmt_pnl}
+                if pnl_a_col in df_display.columns:
+                    fmt_dict[pnl_a_col] = _fmt_pnl
+                    fmt_dict[pnl_b_col] = _fmt_pnl
 
-                    styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
-                    if pnl_a_col in df_display.columns:
-                        styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
-                    st.dataframe(styled, use_container_width=True, hide_index=True)
+                styled = df_display.style.apply(_row_color, axis=1).format(fmt_dict)
+                if pnl_a_col in df_display.columns:
+                    styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
+                st.dataframe(styled, use_container_width=True, hide_index=True)
 
             df = m["df"]
             df = df[(df.index >= ts_start) & (df.index <= ts_end)]
@@ -1042,21 +1042,26 @@ with tab_wr:
 
         filtered_labels = [l for l in labels if l in tokens_to_keep]
 
-        # Supprimer aussi les tokens dont toutes les paires restantes sont vides après filtre
-        def has_visible_pair(token, all_filtered):
-            for other in all_filtered:
-                if other == token:
-                    continue
-                val = wr_matrix.loc[token, other] if (token in wr_matrix.index and other in wr_matrix.columns) else None
-                nt  = nt_matrix.loc[token, other] if (not nt_matrix.empty and token in nt_matrix.index and other in nt_matrix.columns) else None
-                if val is None or (isinstance(val, float) and pd.isna(val)):
-                    continue
-                nt_val = int(nt) if nt is not None and not (isinstance(nt, float) and pd.isna(nt)) else 0
-                if float(val) >= threshold and nt_val >= nt_min:
-                    return True
-            return False
+        # Iteration jusqu'à stabilité — retirer les tokens sans aucune paire visible
+        def get_stable_labels(candidates):
+            prev = None
+            while prev != candidates:
+                prev = candidates[:]
+                candidates = [
+                    t for t in candidates
+                    if any(
+                        (lambda v, n: v is not None and not (isinstance(v, float) and pd.isna(v))
+                         and float(v) >= threshold
+                         and (int(n) if n is not None and not (isinstance(n, float) and pd.isna(n)) else 0) >= nt_min)(
+                            wr_matrix.loc[t, o] if (t in wr_matrix.index and o in wr_matrix.columns) else None,
+                            nt_matrix.loc[t, o] if (not nt_matrix.empty and t in nt_matrix.index and o in nt_matrix.columns) else None
+                        )
+                        for o in candidates if o != t
+                    )
+                ]
+            return candidates
 
-        filtered_labels = [l for l in filtered_labels if has_visible_pair(l, filtered_labels)]
+        filtered_labels = get_stable_labels(filtered_labels)
 
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
