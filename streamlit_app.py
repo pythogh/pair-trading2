@@ -14,28 +14,100 @@ st.set_page_config(page_title="Pair Trading", layout="wide")
 # ─── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-html, body, [class*="css"] { font-size: 13px !important; }
-h1 { font-size: 17px !important; font-weight: 400 !important; letter-spacing: -0.02em !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+
+/* ── Base ── */
+html, body, [class*="css"], .stMarkdown, .stText, p, span, div {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 13px !important;
+    -webkit-font-smoothing: antialiased !important;
+}
+.stApp { background: #ffffff !important; }
+.block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
+
+/* ── Titre ── */
+h1 { font-size: 18px !important; font-weight: 400 !important; letter-spacing: -0.03em !important; color: #111 !important; }
 h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
-.block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
-[data-testid="stSidebar"] { background-color: #fafaf8 !important; min-width: 200px !important; max-width: 200px !important; }
-[data-testid="stSidebar"] label { font-size: 11px !important; color: #888 !important; }
-.stButton > button { background: #1a1a1a !important; color: #fff !important; border: none !important; border-radius: 6px !important; font-size: 12px !important; height: 32px !important; letter-spacing: 0.01em !important; }
+
+/* ── Dividers ── */
+hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 1rem 0 !important; }
+
+/* ── Boutons ── */
+.stButton > button {
+    background: #111 !important; color: #fff !important;
+    border: none !important; border-radius: 6px !important;
+    font-size: 12px !important; font-weight: 400 !important;
+    height: 32px !important; padding: 0 14px !important;
+    letter-spacing: 0.01em !important;
+    transition: background 0.15s !important;
+}
 .stButton > button:hover { background: #333 !important; }
-[data-testid="metric-container"] { background: transparent !important; border-radius: 0 !important; padding: 10px 0 !important; border: none !important; border-bottom: 2px solid #e8e8e6 !important; }
-[data-testid="stMetricLabel"] { font-size: 10px !important; color: #999 !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; }
-[data-testid="stMetricValue"] { font-size: 22px !important; font-weight: 400 !important; }
-[data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
-[data-testid="stSelectbox"] > div > div { min-height: 32px !important; font-size: 12px !important; }
-[data-testid="stNumberInput"] input { height: 32px !important; font-size: 12px !important; padding: 4px 8px !important; }
-[data-testid="stDateInput"] input { height: 32px !important; font-size: 12px !important; padding: 4px 8px !important; }
-[data-testid="stDateInput"] label { font-size: 11px !important; color: #888 !important; }
-[data-testid="stAlert"] { font-size: 12px !important; padding: 8px 14px !important; }
-button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !important; margin-right: 4px !important; }
-.stApp { background-color: #ffffff !important; }
+.stButton > button:focus { box-shadow: none !important; outline: 2px solid #ccc !important; }
+
+/* ── Radio ── */
+[data-testid="stRadio"] label { font-size: 12px !important; }
+[data-testid="stRadio"] > div { gap: 12px !important; }
+
+/* ── Selectbox ── */
+[data-testid="stSelectbox"] label { font-size: 11px !important; color: #888 !important; margin-bottom: 2px !important; }
+[data-testid="stSelectbox"] > div > div {
+    min-height: 32px !important; font-size: 12px !important;
+    border: 1px solid #e8e8e6 !important; border-radius: 6px !important;
+    background: #fff !important;
+}
+[data-testid="stSelectbox"] > div > div:focus-within { border-color: #999 !important; box-shadow: none !important; }
+
+/* ── Number inputs ── */
+[data-testid="stNumberInput"] label { font-size: 11px !important; color: #888 !important; }
+[data-testid="stNumberInput"] input {
+    height: 32px !important; font-size: 12px !important;
+    border: 1px solid #e8e8e6 !important; border-radius: 6px !important;
+    padding: 4px 8px !important; background: #fff !important;
+}
+[data-testid="stNumberInput"] input:focus { border-color: #999 !important; box-shadow: none !important; outline: none !important; }
+[data-testid="stNumberInput"] button { border: 1px solid #e8e8e6 !important; background: #fafaf8 !important; }
+
+/* ── Sliders ── */
+[data-testid="stSlider"] label { font-size: 11px !important; color: #888 !important; }
+[data-testid="stSlider"] [data-baseweb="slider"] { padding: 0 !important; }
+[data-testid="stSlider"] [role="slider"] { background: #111 !important; border: 2px solid #fff !important; box-shadow: 0 0 0 1px #ccc !important; }
+[data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSlider"] [data-testid="stTickBarMax"] { font-size: 10px !important; color: #bbb !important; }
+
+/* ── Tabs ── */
+button[data-baseweb="tab"] {
+    font-size: 12px !important; font-weight: 400 !important;
+    padding: 8px 18px !important; margin-right: 2px !important;
+    border-radius: 6px 6px 0 0 !important; color: #888 !important;
+    background: transparent !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] { color: #111 !important; font-weight: 500 !important; }
+[data-testid="stTabs"] [data-baseweb="tab-border"] { background-color: #eee !important; }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { background-color: #111 !important; height: 2px !important; }
+
+/* ── Expander ── */
+[data-testid="stExpander"] { border: 1px solid #f0f0ee !important; border-radius: 8px !important; }
+[data-testid="stExpander"] summary { font-size: 12px !important; font-weight: 400 !important; color: #555 !important; padding: 10px 14px !important; }
+[data-testid="stExpander"] summary:hover { color: #111 !important; }
+
+/* ── Dataframe ── */
+[data-testid="stDataFrame"] { border: 1px solid #f0f0ee !important; border-radius: 8px !important; overflow: hidden !important; }
 [data-testid="stDataFrame"] img { border-radius: 50% !important; }
-[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] > div, .stPlotlyChart { margin-bottom: 24px !important; }
-hr { border: none !important; border-top: 1px solid #f0f0f0 !important; }
+
+/* ── Alerts ── */
+[data-testid="stAlert"] { font-size: 12px !important; border-radius: 6px !important; border: 1px solid #e8e8e6 !important; padding: 10px 14px !important; }
+
+/* ── Caption ── */
+[data-testid="stCaptionContainer"] { font-size: 11px !important; color: #bbb !important; }
+
+/* ── Plotly charts ── */
+[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] > div, .stPlotlyChart { margin-bottom: 20px !important; }
+
+/* ── Progress bar ── */
+[data-testid="stProgressBar"] > div { background: #111 !important; border-radius: 4px !important; }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] { background: #fafaf8 !important; border-right: 1px solid #f0f0ee !important; }
 </style>
 """, unsafe_allow_html=True)
 
