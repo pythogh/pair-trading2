@@ -45,17 +45,11 @@ button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !impo
 """, unsafe_allow_html=True)
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
-DATA_DIR = "data"
-
-# ─── TIMEFRAME ─────────────────────────────────────────────────────────────────
-TIMEFRAMES = {
-    "Daily":  {"dir": "data",        "label": "Daily",  "bars_per_day": 1,  "zwindow": 30,  "hl_max": 15,  "min_bars": 40},
-    "Hourly": {"dir": "data-hourly", "label": "Hourly", "bars_per_day": 24, "zwindow": 720, "hl_max": 360, "min_bars": 240},
-}
-
-# Init session state timeframe ici — avant tout appel à st.session_state["timeframe"]
-if "timeframe" not in st.session_state:
-    st.session_state["timeframe"] = "Daily"
+DATA_DIR    = "data-hourly"
+BARS_PER_DAY = 24
+Z_WINDOW     = 720   # ~30 jours en bougies horaires
+HL_MAX_BARS  = 360   # ~15 jours en bougies horaires
+MIN_BARS     = 240   # minimum 10 jours de données
 
 def scan_tokens(data_dir):
     files = glob.glob(os.path.join(data_dir, "*-historical-data.csv"))
@@ -66,11 +60,10 @@ def scan_tokens(data_dir):
         tokens[label] = slug
     return tokens
 
-_tf_cfg = TIMEFRAMES[st.session_state["timeframe"]]
-CRYPTOS = scan_tokens(_tf_cfg["dir"])
+CRYPTOS = scan_tokens(DATA_DIR)
 
 if not CRYPTOS:
-    st.error(f"Aucun fichier trouvé dans `{_tf_cfg['dir']}/`. Vérifie que tes CSV sont bien au format `nom-historical-data.csv`.")
+    st.error(f"Aucun fichier trouvé dans `{DATA_DIR}/`. Vérifie que tes CSV sont bien au format `nom-historical-data.csv`.")
     st.stop()
 
 # ─── COULEURS PAR TOKEN ────────────────────────────────────────────────────────
@@ -85,52 +78,30 @@ def token_color(name: str) -> str:
 
 # ─── FONCTIONS ─────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
-def fetch_prices(slug, data_dir):
+def fetch_prices(slug, data_dir=DATA_DIR):
     path = os.path.join(data_dir, f"{slug}-historical-data.csv")
     if not os.path.exists(path):
         return None, f"Fichier introuvable : {path}"
     try:
         df = pd.read_csv(path, header=0)
         df.columns = [c.strip() for c in df.columns]
-
-        # Détecter format daily (colonnes CryptoRank) ou hourly (date, price, price_chg_%)
-        if "Close" in df.columns:
-            # Format daily existant
-            for col in df.columns:
-                if col != "Date":
-                    df[col] = pd.to_numeric(
-                        df[col].astype(str).str.replace("$","",regex=False).str.replace(",","",regex=False).str.strip(),
-                        errors="coerce"
-                    )
-            df["Date"] = pd.to_datetime(df["Date"])
-            df = df.sort_values("Date").set_index("Date")
-            series = df["Close"].dropna()
-        else:
-            # Format hourly : date, price, price_chg_%
-            date_col = df.columns[0]
-            price_col = df.columns[1]
-            df[date_col] = pd.to_datetime(df[date_col], dayfirst=True)
-            df[price_col] = pd.to_numeric(df[price_col], errors="coerce")
-            df = df.sort_values(date_col).set_index(date_col)
-            series = df[price_col].dropna()
-
-        tf = TIMEFRAMES[st.session_state["timeframe"]]
-        if len(series) < tf["min_bars"]:
-            return None, f"{slug} : seulement {len(series)} bougies (minimum {tf['min_bars']})"
+        date_col  = df.columns[0]
+        price_col = df.columns[1]
+        df[date_col]  = pd.to_datetime(df[date_col], dayfirst=True)
+        df[price_col] = pd.to_numeric(df[price_col], errors="coerce")
+        df = df.sort_values(date_col).set_index(date_col)
+        series = df[price_col].dropna()
+        if len(series) < MIN_BARS:
+            return None, f"{slug} : seulement {len(series)} bougies (minimum {MIN_BARS})"
         return series, None
     except Exception as e:
         return None, f"Erreur lecture {slug} : {str(e)}"
 
 
 def compute_metrics(series_a, series_b, name_a, name_b):
-    tf = TIMEFRAMES[st.session_state["timeframe"]]
-    bpd = tf["bars_per_day"]
-    zwindow = tf["zwindow"]
-    hl_max  = tf["hl_max"]
-
     df = pd.concat([series_a, series_b], axis=1).dropna()
     df.columns = ["A", "B"]
-    if len(df) < tf["min_bars"]:
+    if len(df) < MIN_BARS:
         return None
 
     returns = df.pct_change().dropna()
@@ -138,7 +109,7 @@ def compute_metrics(series_a, series_b, name_a, name_b):
 
     X = sm.add_constant(df["B"])
     model = sm.OLS(df["A"], X).fit()
-    beta = model.params["B"]
+    beta  = model.params["B"]
     alpha = model.params["const"]
 
     spread = df["A"] - (beta * df["B"] + alpha)
@@ -147,32 +118,28 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     except Exception:
         p_value = 1.0
 
-    z_score = (spread - spread.rolling(zwindow).mean()) / spread.rolling(zwindow).std()
+    z_score   = (spread - spread.rolling(Z_WINDOW).mean()) / spread.rolling(Z_WINDOW).std()
     current_z = float(z_score.iloc[-1])
 
-    spread_lag = spread.shift(1)
+    spread_lag  = spread.shift(1)
     spread_diff = spread.diff()
     valid = ~(spread_lag.isna() | spread_diff.isna())
     try:
         res = sm.OLS(spread_diff[valid], spread_lag[valid]).fit()
-        lambda_val = -res.params.iloc[0]
-        half_life_bars = np.log(2) / lambda_val if lambda_val > 0 else float("inf")
-        half_life_days = half_life_bars / bpd
+        lambda_val     = -res.params.iloc[0]
+        hl_bars        = np.log(2) / lambda_val if lambda_val > 0 else float("inf")
+        hl_days        = hl_bars / BARS_PER_DAY
     except Exception:
-        half_life_bars = float("inf")
-        half_life_days = float("inf")
+        hl_bars = float("inf")
+        hl_days = float("inf")
 
     ok_corr = correlation >= 0.7
     ok_p    = p_value < 0.05
-    ok_hl   = half_life_bars < hl_max
+    ok_hl   = hl_bars < HL_MAX_BARS
     ok_z    = abs(current_z) > 2
 
-    if ok_corr and ok_p and ok_hl and ok_z:
-        verdict = "✅ Valide"
-        verdict_color = "green"
-    else:
-        verdict = "❌ Non valide"
-        verdict_color = "red"
+    verdict       = "✅ Valide" if (ok_corr and ok_p and ok_hl and ok_z) else "❌ Non valide"
+    verdict_color = "green" if verdict == "✅ Valide" else "red"
 
     if current_z > 2:
         signal = f"SHORT ↓ {name_a} / LONG ↑ {name_b}"
@@ -181,43 +148,25 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     else:
         signal = "—"
 
-    # Half-life affiché en jours
-    hl_display = round(half_life_days, 1) if half_life_days != float("inf") else "∞"
-    hl_label   = "h" if bpd == 24 else "j"
+    hl_display = round(hl_days, 1) if hl_days != float("inf") else "∞"
 
     return {
-        "Corrélation":       round(correlation, 3),
-        "Hedge Ratio (β)":   round(float(beta), 4),
+        "Corrélation":        round(correlation, 3),
+        "Hedge Ratio (β)":    round(float(beta), 4),
         "Co-intégration (p)": round(p_value, 4),
-        f"Half-Life ({hl_label})": hl_display,
-        "Z-Score":           round(current_z, 2),
-        "Verdict":           verdict,
-        "Signal":            signal,
-        "spread":            spread,
-        "z_score":           z_score,
-        "df":                df,
-        "verdict_color":     verdict_color,
+        "Half-Life (j)":      hl_display,
+        "Z-Score":            round(current_z, 2),
+        "Verdict":            verdict,
+        "Signal":             signal,
+        "spread":             spread,
+        "z_score":            z_score,
+        "df":                 df,
+        "verdict_color":      verdict_color,
     }
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
-_h1, _h2 = st.columns([3, 1])
-with _h1:
-    st.title("📈 Pair Trading Analyzer")
-with _h2:
-    st.markdown("<div style='margin-top:14px'>", unsafe_allow_html=True)
-    _tf = st.radio("Timeframe", list(TIMEFRAMES.keys()), horizontal=True,
-                   index=list(TIMEFRAMES.keys()).index(st.session_state["timeframe"]),
-                   key="_tf_radio")
-    if _tf != st.session_state["timeframe"]:
-        st.session_state["timeframe"] = _tf
-        st.session_state["matrix_results"] = []
-        st.session_state.pop("wr_matrix", None)
-        st.session_state.pop("bt_data", None)
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
-_tf_cfg = TIMEFRAMES[st.session_state["timeframe"]]
-st.caption(f"Données {_tf_cfg['label']} · {len(CRYPTOS)} tokens · dossier `{_tf_cfg['dir']}/`")
+st.title("📈 Pair Trading Analyzer")
+st.caption(f"Données horaires · {len(CRYPTOS)} tokens · dossier `{DATA_DIR}/`")
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
 if "prefill_a" not in st.session_state:
@@ -318,7 +267,7 @@ if not st.session_state["matrix_results"] or _stale:
     bar = st.progress(0, text="Calcul des paires en cours...")
     price_cache = {}
     for name in all_names:
-        price_cache[name], _ = fetch_prices(CRYPTOS[name], _tf_cfg["dir"])
+        price_cache[name], _ = fetch_prices(CRYPTOS[name])
     results_auto = []
     for i, (a, b) in enumerate(pairs):
         bar.progress((i + 1) / len(pairs), text=f"Calcul {a} / {b}…")
@@ -332,7 +281,7 @@ if not st.session_state["matrix_results"] or _stale:
             "Corrélation":     m["Corrélation"],
             "Hedge Ratio β":   m["Hedge Ratio (β)"],
             "Co-intégration p": m["Co-intégration (p)"],
-            "Half-Life":       m[[k for k in m if "Half-Life" in k][0]],
+            "Half-Life":       m["Half-Life (j)"],
             "Z-Score":         m["Z-Score"],
             "Verdict":         m["Verdict"],
             "Signal":          m["Signal"],
@@ -521,8 +470,8 @@ with tab_bt:
     else:
         # Lancement de l'analyse au clic — stocke les résultats dans session_state
         if analyse:
-            s_a, err_a = fetch_prices(CRYPTOS[name_a], _tf_cfg["dir"])
-            s_b, err_b = fetch_prices(CRYPTOS[name_b], _tf_cfg["dir"])
+            s_a, err_a = fetch_prices(CRYPTOS[name_a])
+            s_b, err_b = fetch_prices(CRYPTOS[name_b])
             if err_a:
                 st.error(f"❌ {name_a} : {err_a}")
             elif err_b:
@@ -878,7 +827,7 @@ with tab_wr:
         bar = _progress_container.progress(0, text="Calcul en cours...")
         price_cache = {}
         for name in all_names:
-            price_cache[name], _ = fetch_prices(CRYPTOS[name], _tf_cfg["dir"])
+            price_cache[name], _ = fetch_prices(CRYPTOS[name])
 
         wr_matrix = pd.DataFrame(index=all_names, columns=all_names, dtype=object)
         total_pairs = n * (n - 1) // 2
