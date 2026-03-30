@@ -17,12 +17,15 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
 
 /* ── Base ── */
-html, body, [class*="css"], .stMarkdown, .stText, p, span, div {
+html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, input {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     font-size: 13px !important;
     -webkit-font-smoothing: antialiased !important;
 }
 .stApp { background: #f9f7f4 !important; }
+[data-testid="stDataFrame"] { background: #ffffff !important; border-radius: 8px !important; }
+[data-testid="stDataFrame"] > div > div > div { background: #ffffff !important; }
+.dvn-scroller { background: #ffffff !important; }
 .block-container { background: #f9f7f4 !important; }
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
@@ -32,6 +35,9 @@ h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 
 /* ── Dividers ── */
 hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 1rem 0 !important; }
+[data-testid="stDataFrame"] * { font-family: 'Inter', -apple-system, sans-serif !important; font-size: 12px !important; }
+[data-testid="stDataFrame"] { background: #ffffff !important; }
+.dvn-scroller, .dvn-scroller * { background: #ffffff !important; }
 
 /* ── Boutons ── */
 .stButton > button {
@@ -1145,14 +1151,14 @@ with tab_wr:
                     elif zscore is None:
                         # WR passe mais pas de z-score — affiche juste WR
                         row_z.append(0.3)
-                        row_t.append(f"{wr:.0%} WR")
+                        row_t.append("")
                         row_h.append(f"<b>{dn(a)} / {dn(b)}</b><br>Win Rate : {wr:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else "") + "<br><i>Clic → Backtest</i>")
                     else:
                         abs_z = abs(zscore)
                         color_val = min(abs_z / 3.0, 1.0)
                         signal_icon = "↑" if zscore > 0 else "↓"
                         row_z.append(color_val)
-                        row_t.append(f"z {zscore:+.1f}{signal_icon}\n{wr:.0%} WR")
+                        row_t.append(f"{zscore:+.1f}{signal_icon}")
                         row_h.append(
                             f"<b>{dn(a)} / {dn(b)}</b><br>"
                             f"Z-Score : <b>{zscore:+.2f}</b> {signal_icon}<br>"
