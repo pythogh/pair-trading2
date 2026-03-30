@@ -399,10 +399,11 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="padding:14px 16px 12px;border-bottom:2px solid #e8e8e6;">
-            <p style="font-size:10px;color:#999;margin:0 0 10px;letter-spacing:0.04em;text-transform:uppercase">{info['name']}</p>
-            <p style="font-size:11px;color:#bbb;margin:0 0 8px;font-family:Georgia,serif">{info['formule']}</p>
-            <p style="font-size:10px;color:#ccc;margin:0">seuil : {info['seuil']}</p>
+            f"""<div style="border:1px dashed #ccc;border-radius:8px;padding:14px 14px 14px;height:150px;display:flex;flex-direction:column;">
+            <p style="font-size:12px;font-weight:500;margin:0 0 2px">{info['emoji']} {info['name']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 8px">Seuil : {info['seuil']}</p>
+            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 8px;color:#333">{info['formule']}</p>
+            <p style="font-size:11px;color:#888;line-height:1.4;margin:0">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -500,6 +501,7 @@ ts_start = pd.Timestamp.min
 ts_end   = pd.Timestamp.max
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
+st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
 
 with tab_bt:
@@ -665,8 +667,8 @@ with tab_bt:
                 for col, (label, value, color, icon) in zip(bt_cols, bt_cards):
                     with col:
                         st.markdown(
-                            f"""<div style="padding:14px 16px 12px;border-bottom:2px solid {color};">
-                            <p style="font-size:11px;color:#999;margin:0 0 8px;letter-spacing:0.03em;text-transform:uppercase">{label}</p>
+                            f"""<div style="border:1px solid #eee;border-radius:8px;padding:14px 16px 12px;">
+                            <p style="font-size:10px;color:#999;margin:0 0 8px;letter-spacing:0.04em;text-transform:uppercase">{label}</p>
                             <p style="font-size:22px;font-weight:400;margin:0;color:{color};letter-spacing:-0.02em">{"<span style='font-size:14px;margin-right:3px'>"+icon+"</span>" if icon else ""}{value}</p>
                             </div>""",
                             unsafe_allow_html=True
@@ -674,7 +676,7 @@ with tab_bt:
                 st.markdown("<div style='margin:20px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
-                with st.expander(f"Détail des {n_trades} trades", expanded=True):
+                with st.expander(f"  Détail des {n_trades} trades", expanded=True):
                     st.markdown(
                         f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                         f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
