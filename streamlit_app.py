@@ -1076,26 +1076,59 @@ with tab_wr:
         if not filtered_labels:
             st.info("Aucune paire ne dépasse ce seuil.")
         else:
+            # Construire la matrice complète avec toutes les valeurs
+            all_z = {}
+            for a in labels:
+                for b in labels:
+                    if a == b:
+                        all_z[(a,b)] = None
+                        continue
+                    val = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
+                    all_z[(a,b)] = val
+
+            # Filtrer : garder seulement les tokens qui ont au moins une cellule qui passe les filtres
+            def has_passing_cell(token, candidate_list):
+                return any(cell_passes(token, o) for o in candidate_list if o != token)
+
+            # Partir de tous les labels avec une valeur non-nulle
+            has_any = [l for l in labels if any(all_z.get((l, o)) is not None for o in labels if o != l)]
+            # Filtrage itératif sur la condition passes
+            fl = has_any[:]
+            changed = True
+            while changed:
+                new_fl = [l for l in fl if has_passing_cell(l, fl)]
+                changed = new_fl != fl
+                fl = new_fl
+            filtered_labels = fl
+
             display_labels = [dn(l) for l in filtered_labels]
             z_vals, text_vals, hover_vals = [], [], []
             for a in filtered_labels:
                 row_z, row_t, row_h = [], [], []
                 for b in filtered_labels:
                     if a == b:
-                        row_z.append(None); row_t.append(""); row_h.append("—")
+                        row_z.append(-1); row_t.append(""); row_h.append("—")
                         continue
-                    val = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
-                    if val is None:
-                        row_z.append(None); row_t.append(""); row_h.append("—")
-                        continue
+                    val = all_z.get((a, b))
                     nt_val = None
                     if has_nt and a in nt_matrix.index and b in nt_matrix.columns:
                         nt_val = int(float(nt_matrix.loc[a, b])) if safe_float(nt_matrix.loc[a, b]) is not None else None
                     passes = cell_passes(a, b)
-                    nt_str = f"\n{nt_val}T" if nt_val is not None else ""
-                    row_z.append(val if passes else None)
-                    row_t.append(f"{val:.0%}{nt_str}" if passes else "")
-                    row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {val:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
+                    if val is None:
+                        row_z.append(-1); row_t.append(""); row_h.append("—")
+                    elif passes:
+                        nt_str = f"\n{nt_val}T" if nt_val is not None else ""
+                        row_z.append(val)
+                        row_t.append(f"{val:.0%}{nt_str}")
+                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {val:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else ""))
+                    else:
+                        # Sous le seuil — gris clair, pas de texte
+                        row_z.append(-0.5)
+                        row_t.append("")
+                        row_h.append(f"{dn(a)} / {dn(b)}<br>Win rate : {val:.0%}" + (f"<br>Trades : {nt_val}" if nt_val else "") + "<br><i>sous le seuil</i>")
+                z_vals.append(row_z)
+                text_vals.append(row_t)
+                hover_vals.append(row_h)
                 z_vals.append(row_z)
                 text_vals.append(row_t)
                 hover_vals.append(row_h)
@@ -1110,10 +1143,14 @@ with tab_wr:
                 hovertemplate="%{hovertext}<extra></extra>",
                 texttemplate="%{text}",
                 colorscale=[
-                    [0.0, "#fdf0f0"], [0.4, "#fef3e2"],
-                    [0.6, "#e8f7f1"], [1.0, "#0F6E56"],
+                    [0.0,  "#f5f5f5"],   # -1   → blanc cassé (diagonale / null)
+                    [0.25, "#f5f5f5"],   # -0.5 → gris très clair (sous seuil)
+                    [0.26, "#fdf0f0"],   # 0    → rouge très clair
+                    [0.6,  "#fef3e2"],   # 0.5  → orange clair
+                    [0.75, "#e8f7f1"],   # 0.75 → vert clair
+                    [1.0,  "#0F6E56"],   # 1    → vert foncé
                 ],
-                zmin=0, zmax=1, showscale=False,
+                zmin=-1, zmax=1, showscale=False,
             ))
             # Shapes : lignes aux bordures des cellules pour un vrai quadrillage
             grid_shapes = []
