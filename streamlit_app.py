@@ -401,11 +401,11 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
-            <p style="font-size:8px;color:#666666;margin:0 0 12px">Seuil : {info['seuil']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
-            <p style="font-size:8px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
+            <p style="font-size:9px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -414,7 +414,11 @@ st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
-st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 8px;color:#111'>Signaux actifs</h2>", unsafe_allow_html=True)
+_sh1, _sh2 = st.columns([2, 2])
+with _sh1:
+    st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 8px;color:#111'>Signaux actifs</h2>", unsafe_allow_html=True)
+with _sh2:
+    search_paire = st.text_input("", placeholder="🔍 Rechercher une paire...", label_visibility="collapsed", key="search_paire")
 filtre = st.radio("", ["Valide uniquement", "Tout"], horizontal=True, label_visibility="collapsed")
 
 if not st.session_state.get("matrix_results"):
@@ -426,6 +430,9 @@ else:
         df_tab1_signal = df_tab1[df_tab1["Verdict"] == "✅ Valide"].copy()
     else:
         df_tab1_signal = df_tab1.copy()
+
+    if search_paire:
+        df_tab1_signal = df_tab1_signal[df_tab1_signal["Paire"].str.contains(search_paire, case=False, na=False)]
 
     df_tab1_signal = df_tab1_signal.sort_values("Verdict").reset_index(drop=True)
 
