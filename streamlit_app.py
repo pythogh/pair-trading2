@@ -232,8 +232,8 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     }
 
 # ─── UI ────────────────────────────────────────────────────────────────────────
-st.title("📈 Pair Trading Analyzer")
-st.markdown(f"<p style='font-size:12px;color:#666;margin:2px 0 0'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#f0f0ee;padding:1px 4px;border-radius:3px;font-size:11px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='font-size:22px;font-weight:500;letter-spacing:-0.02em;margin:0 0 6px;color:#111'>📈 Pair Trading Analyzer</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='font-size:11px;color:#888;margin:0 0 24px'>Données horaires · {len(CRYPTOS)} tokens · dossier <code style='background:#f0f0ee;padding:1px 4px;border-radius:3px;font-size:10px'>{DATA_DIR}/</code></p>", unsafe_allow_html=True)
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
 if "prefill_a" not in st.session_state:
@@ -399,11 +399,11 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:200px;display:flex;flex-direction:column;box-sizing:border-box;">
+            f"""<div style="border:1.5px solid #ddd;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
-            <p style="font-size:10px;color:#aaa;line-height:1.5;margin:0;flex:1">{info['note']}</p>
+            <p style="font-size:9.5px;color:#bbb;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
@@ -412,7 +412,7 @@ st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
-st.markdown("#### Signaux actifs")
+st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 8px;color:#111'>Signaux actifs</h2>", unsafe_allow_html=True)
 filtre = st.radio("", ["Valide uniquement", "Tout"], horizontal=True, label_visibility="collapsed")
 
 if not st.session_state.get("matrix_results"):
@@ -680,7 +680,7 @@ with tab_bt:
                 st.markdown("<div style='margin:20px 0 0'></div>", unsafe_allow_html=True)
 
                 # Tableau détail trades
-                with st.expander(f"  Détail des {n_trades} trades", expanded=True):
+                with st.expander(f"Détail des {n_trades} trades", expanded=True):
                     st.markdown(
                         f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
                         f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
