@@ -433,7 +433,7 @@ with gp5:
     today = dt.date.today()
     period_days = st.slider(
         "Période d'analyse",
-        min_value=7, max_value=365, value=90, step=7,
+        min_value=7, max_value=90, value=90, step=7,
         format="%d j",
         key="bt_period"
     )
