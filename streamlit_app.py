@@ -48,7 +48,7 @@ button[data-baseweb="tab"] { font-size: 12px !important; padding: 8px 20px !impo
 DATA_DIR    = "data-hourly"
 BARS_PER_DAY = 24
 Z_WINDOW     = 336   # ~14 jours en bougies horaires
-HL_MAX_BARS  = 360   # ~15 jours en bougies horaires
+HL_MAX_BARS  = 120   # ~5 jours en bougies horaires
 MIN_BARS     = 240   # minimum 10 jours de données
 
 def scan_tokens(data_dir):
@@ -315,7 +315,7 @@ METRICS_COMPACT = [
     {
         "emoji": "⏳",
         "name": "Half-Life",
-        "seuil": "5–15 jours (120–360h)",
+        "seuil": "2–5 jours (48–120h)",
         "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
         "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 336h (14j).",
     },
@@ -419,7 +419,7 @@ else:
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
 st.markdown("<p style='font-size:11px;color:#aaa;margin:8px 0 4px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
-gp1, gp2, gp3, gp4, gp5 = st.columns([0.4, 0.4, 0.4, 0.4, 2.4])
+gp1, gp2, gp3, gp4 = st.columns([0.4, 0.4, 0.4, 0.4])
 with gp1:
     entry_z = st.number_input("Entrée z", value=2.0, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
 with gp2:
@@ -429,20 +429,9 @@ with gp3:
 with gp4:
     max_duration = st.number_input("Durée max (h)", value=72, step=6, min_value=6, max_value=720, key="bt_duration",
                                    help="Durée maximale d'un trade en heures (ex: 72h = 3 jours)")
-with gp5:
-    today = dt.date.today()
-    period_days = st.slider(
-        "Période d'analyse",
-        min_value=7, max_value=90, value=90, step=7,
-        format="%d j",
-        key="bt_period"
-    )
-    date_start = today - dt.timedelta(days=period_days)
-    date_end   = today
-    st.caption(f"{date_start.strftime('%d %b %Y')} → {date_end.strftime('%d %b %Y')}")
 
-ts_start = pd.Timestamp(date_start)
-ts_end   = pd.Timestamp(date_end)
+ts_start = pd.Timestamp.min
+ts_end   = pd.Timestamp.max
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", "🧪 Test Logo"])
@@ -829,10 +818,10 @@ with tab_bt:
                      fillcolor="rgba(220,50,50,0.08)", line_width=0, layer="below"),
                 dict(type="line", xref="paper", yref="y", x0=0, x1=1,
                      y0=entry_z, y1=entry_z,
-                     line=dict(color="rgba(220,50,50,0.9)", width=2)),
+                     line=dict(color="rgba(220,50,50,0.8)", width=1, dash="dash")),
                 dict(type="line", xref="paper", yref="y", x0=0, x1=1,
                      y0=-entry_z, y1=-entry_z,
-                     line=dict(color="rgba(220,50,50,0.9)", width=2)),
+                     line=dict(color="rgba(220,50,50,0.8)", width=1, dash="dash")),
                 dict(type="line", xref="paper", yref="y", x0=0, x1=1,
                      y0=0, y1=0,
                      line=dict(color="rgba(180,180,180,0.5)", width=1, dash="dot")),
