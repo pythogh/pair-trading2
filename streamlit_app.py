@@ -496,7 +496,7 @@ for col, info in zip(cols, METRICS_COMPACT):
             </div>""",
             unsafe_allow_html=True
         )
-        with st.popover("?", use_container_width=False):
+        with st.expander("?"):
             st.markdown(f"**{info['name']}**")
             st.markdown(info['detail'])
 
