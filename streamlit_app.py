@@ -408,7 +408,6 @@ if not st.session_state["matrix_results"] or _stale:
                 continue
             results_auto.append({
                 "Paire":            f"{dn(a)} / {dn(b)}",
-                "_a": a, "_b": b,
                 "Corrélation":      m["Corrélation"],
                 "Hedge Ratio β":    m["Hedge Ratio (β)"],
                 "Co-intégration p": m["Co-intégration (p)"],
@@ -564,8 +563,7 @@ st.markdown("<h2 style='font-size:13px;font-weight:500;letter-spacing:0.06em;tex
 
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
-st.markdown("<p style='font-size:11px;color:#888;margin:0 0 8px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
-gp1, gp2, gp3, gp4 = st.columns([0.4, 0.4, 0.4, 0.4])
+gp1, gp2, gp3, gp4 = st.columns([1, 1, 1, 1])
 with gp1:
     entry_z = st.number_input("Entrée z", value=1.5, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
 with gp2:
@@ -591,7 +589,7 @@ with tab_bt:
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
-    c1, c2, c3, _ = st.columns([0.8, 0.8, 0.35, 2.05])
+    c1, c2, c3, _ = st.columns([1, 1, 0.5, 1.5])
     with c1:
         name_a = st.selectbox("Actif A", keys, index=default_a, key="sel_a")
     with c2:
@@ -1111,7 +1109,7 @@ with tab_wr:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Affichage — depuis session_state si disponible
     # Contrôles toujours visibles
-    mc1, mc2, mc4 = st.columns([0.8, 0.35, 0.8])
+    mc1, mc2, mc4 = st.columns([1, 0.5, 1])
     with mc1:
         metric_choice = st.selectbox("Métrique affichée", [
             "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
