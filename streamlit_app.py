@@ -616,6 +616,8 @@ with tab_bt:
                 m = compute_metrics(s_a, s_b, name_a, name_b)
                 if m is None:
                     st.error("Pas assez de données communes pour calculer.")
+                elif m.get("_skip"):
+                    st.warning(f"Corrélation trop faible ({m['Corrélation']:.2f}) entre {name_a} et {name_b} — pas de calcul possible.")
                 else:
                     beta = m["Hedge Ratio (β)"]
                     p_a = float(s_a.iloc[-1])
