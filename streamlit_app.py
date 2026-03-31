@@ -176,6 +176,10 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     returns = df.pct_change().dropna()
     correlation = returns["A"].corr(returns["B"])
 
+    # Pré-filtrage : skip les calculs lourds si corrélation trop faible
+    if abs(correlation) < 0.65:
+        return {"Corrélation": round(correlation, 3), "_skip": True}
+
     X = sm.add_constant(df["B"])
     model = sm.OLS(df["A"], X).fit()
     beta  = model.params["B"]
@@ -324,6 +328,22 @@ def logo_html(name: str, size: int = 18) -> str:
             f"border-radius:50%;object-fit:cover;vertical-align:middle;'>")
 
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_all_prices(slugs: tuple, data_dir: str) -> dict:
+    """Charge tous les CSV en mémoire une seule fois (cache 1h)."""
+    prices = {}
+    for label, slug in zip(slugs[::2], slugs[1::2]):
+        s, _ = fetch_prices(slug, data_dir)
+        prices[label] = s
+    return prices
+
+def compute_pair(args):
+    """Worker pour la parallélisation."""
+    a, b, sa, sb = args
+    if sa is None or sb is None:
+        return None
+    return compute_metrics(sa, sb, a, b)
+
 _stale = any(
     "Idéale" in str(r.get("Verdict", "")) or
     "Pas de signal" not in [x.get("Verdict","") for x in st.session_state["matrix_results"]] and
@@ -331,30 +351,68 @@ _stale = any(
     for r in st.session_state["matrix_results"]
 )
 if not st.session_state["matrix_results"] or _stale:
+    import concurrent.futures
     all_names = list(CRYPTOS.keys())
     pairs = list(combinations(all_names, 2))
-    bar = st.progress(0, text="Calcul des paires en cours...")
+    bar = st.progress(0, text="Chargement des données…")
+
+    # 3. Cache des prix : charger tous les CSV une fois
     price_cache = {}
     for name in all_names:
         price_cache[name], _ = fetch_prices(CRYPTOS[name])
+
+    # 4. Matrice de corrélations vectorisée avec numpy
+    bar.progress(0.1, text="Calcul des corrélations…")
+    returns_dict = {}
+    for name, s in price_cache.items():
+        if s is not None:
+            returns_dict[name] = s.pct_change().dropna()
+
+    # Aligner toutes les séries et calculer la matrice de corrélation d'un coup
+    if returns_dict:
+        returns_df = pd.DataFrame(returns_dict).dropna()
+        corr_matrix = returns_df.corr()
+    else:
+        corr_matrix = pd.DataFrame()
+
+    # 1. Pré-filtrage : ne garder que les paires avec |corr| >= 0.65
+    filtered_pairs = [
+        (a, b) for a, b in pairs
+        if a in corr_matrix.index and b in corr_matrix.columns
+        and abs(corr_matrix.loc[a, b]) >= 0.65
+    ]
+    skipped = len(pairs) - len(filtered_pairs)
+    bar.progress(0.2, text=f"{skipped} paires éliminées par corrélation, {len(filtered_pairs)} restantes…")
+
+    # 2. Parallélisation avec ThreadPoolExecutor
     results_auto = []
-    for i, (a, b) in enumerate(pairs):
-        bar.progress((i + 1) / len(pairs), text=f"Calcul {a} / {b}…")
-        if price_cache.get(a) is None or price_cache.get(b) is None:
-            continue
-        m = compute_metrics(price_cache[a], price_cache[b], a, b)
-        if m is None:
-            continue
-        results_auto.append({
-            "Paire":           f"{dn(a)} / {dn(b)}",
-            "Corrélation":     m["Corrélation"],
-            "Hedge Ratio β":   m["Hedge Ratio (β)"],
-            "Co-intégration p": m["Co-intégration (p)"],
-            "Half-Life":       m["Half-Life (j)"],
-            "Z-Score":         m["Z-Score"],
-            "Verdict":         m["Verdict"],
-            "Signal":          m["Signal"],
-        })
+    args_list = [(a, b, price_cache.get(a), price_cache.get(b)) for a, b in filtered_pairs]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(compute_pair, args): args for args in args_list}
+        done = 0
+        for future in concurrent.futures.as_completed(futures):
+            done += 1
+            bar.progress(0.2 + 0.8 * done / max(len(futures), 1),
+                         text=f"Calcul {done}/{len(futures)} paires…")
+            a, b = futures[future][0], futures[future][1]
+            try:
+                m = future.result()
+            except Exception:
+                continue
+            if m is None or m.get("_skip"):
+                continue
+            results_auto.append({
+                "Paire":            f"{dn(a)} / {dn(b)}",
+                "Corrélation":      m["Corrélation"],
+                "Hedge Ratio β":    m["Hedge Ratio (β)"],
+                "Co-intégration p": m["Co-intégration (p)"],
+                "Half-Life":        m["Half-Life (j)"],
+                "Z-Score":          m["Z-Score"],
+                "Verdict":          m["Verdict"],
+                "Signal":           m["Signal"],
+            })
+
     st.session_state["matrix_results"] = results_auto
     bar.empty()
 
