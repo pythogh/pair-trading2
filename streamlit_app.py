@@ -230,7 +230,7 @@ def compute_metrics(series_a, series_b, name_a, name_b):
         "Half-Life (j)":      hl_display,
         "Z-Score":            round(current_z, 2),
         "Verdict":            verdict,
-        "Signal":             signal,
+        "Signal":             signal if verdict == "✅ Valide" else "—",
         "spread":             spread,
         "z_score":            z_score,
         "df":                 df,
@@ -581,7 +581,7 @@ st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest",  " "])
+tab_bt, tab_wr, tab_logo = st.tabs(["🔍 Backtest", "🏆 Win Rate", " "])
 
 with tab_bt:
 
@@ -777,8 +777,7 @@ with tab_bt:
                 st.markdown(f"<p style='font-size:12px;font-weight:500;color:#333;margin:16px 0 8px'>Détail des {n_trades} trades</p>", unsafe_allow_html=True)
                 st.markdown(
                     f"<p style='font-size:12px;color:#666;margin:0 0 10px'>"
-                    f"Beta (Hedge Ratio) : {m['Hedge Ratio (β)']:.4f} — "
-                    f"pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
+                    f"Pour {capital}$, allouer <strong>{alloc_a:.0f}$</strong> sur {name_a} "
                     f"et <strong>{alloc_b:.0f}$</strong> sur {name_b}.</p>",
                     unsafe_allow_html=True
                 )
@@ -1127,18 +1126,35 @@ with tab_wr:
         current_params = (entry_z, exit_z, stop_z, max_duration, str(ts_start), str(ts_end))
         if st.session_state.get("wr_params") != current_params:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
-    # Affichage — depuis session_state si disponible
     # Contrôles toujours visibles
-    mc1, mc2, _, mc4 = st.columns([1, 0.5, 2, 1])
+    mc1, mc2, _, mc4 = st.columns([1, 0.35, 1.5, 1])
     with mc1:
         metric_choice = st.selectbox("Métrique affichée", [
             "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
         ], key="mat_metric")
     with mc2:
-        pass  # bouton déplacé au dessus
+        st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
+        if st.button("▶ Analyser", key="mat_run_btn"):
+            st.session_state["_mat_calc"] = True
+        st.markdown("</div>", unsafe_allow_html=True)
     with mc4:
-        wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
+        # Filtre adaptatif selon la métrique
+        if metric_choice == "Win Rate":
+            threshold_val = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter") / 100
+        elif metric_choice == "Nb Trades":
+            threshold_val = st.slider("Trades ≥", 1, 50, 3, 1, key="wr_filter") / 100  # normalized unused
+        elif metric_choice == "Corrélation":
+            threshold_val = st.slider("Corrélation ≥", 0.0, 1.0, 0.7, 0.05, key="wr_filter")
+        elif metric_choice == "Z-Score":
+            threshold_val = st.slider("|Z-Score| ≥", 0.0, 4.0, 1.0, 0.1, key="wr_filter")
+        elif metric_choice == "Half-Life (j)":
+            threshold_val = st.slider("Half-Life ≤ (j)", 1, 30, 10, 1, key="wr_filter")
+        elif metric_choice == "Co-intégration p":
+            threshold_val = st.slider("p-value ≤", 0.01, 0.2, 0.05, 0.01, key="wr_filter")
+        else:
+            threshold_val = 0.6
     nt_min = 1
+    wr_min = int(threshold_val * 100) if metric_choice == "Win Rate" else 0
 
     if "wr_matrix" in st.session_state:
         labels    = st.session_state["wr_labels"]
@@ -1169,7 +1185,8 @@ with tab_wr:
                     row = mr.get(paire_key) or mr.get(paire_key_rev)
                     metric_matrix.loc[a, b] = row[mr_key] if row and mr_key in row else None
 
-        # Garder seulement les tokens qui ont au moins une paire au-dessus des deux seuils
+        # Garder seulement les tokens qui ont au moins une paire au-dessus des seuils
+        # Le filtre WinRate s'applique toujours comme filtre de base de qualité
         threshold = wr_min / 100
         has_nt = not nt_matrix.empty
 
@@ -1187,6 +1204,24 @@ with tab_wr:
                     continue
                 wr = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
                 if wr is None or wr < threshold:
+                    continue
+                # Filtre adaptatif selon la métrique affichée
+                if metric_choice != "Win Rate":
+                    raw = safe_float(metric_matrix.loc[a, b] if (a in metric_matrix.index and b in metric_matrix.columns) else None)
+                    if raw is None:
+                        continue
+                    if metric_choice == "Corrélation" and raw < threshold_val:
+                        continue
+                    elif metric_choice == "Z-Score" and abs(raw) < threshold_val:
+                        continue
+                    elif metric_choice == "Half-Life (j)" and raw > threshold_val:
+                        continue
+                    elif metric_choice == "Co-intégration p" and raw > threshold_val:
+                        continue
+                    elif metric_choice == "Nb Trades":
+                        nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
+                        if nt is None or int(nt) < int(threshold_val * 50):
+                            continue
                     continue
                 if has_nt:
                     nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
