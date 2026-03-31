@@ -19,13 +19,13 @@ st.markdown("""
 /* ── Base ── */
 html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, input {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     -webkit-font-smoothing: antialiased !important;
 }
 .stApp { background: #fefefe !important; }
 
 .block-container { background: #fefefe !important; }
-.block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
+.block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1500px !important; }
 
 /* ── Titre ── */
 h1 { font-size: 24px !important; font-weight: 400 !important; letter-spacing: -0.03em !important; color: #111 !important; }
