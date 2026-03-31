@@ -6,7 +6,6 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import adfuller
 import plotly.graph_objects as go
-import plotly.express as px
 from itertools import combinations
 
 st.set_page_config(page_title="Pair Trading", layout="wide")
@@ -24,7 +23,6 @@ html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, i
 }
 .stApp { background: #fefefe !important; }
 
-.block-container { background: #fefefe !important; }
 .block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1500px !important; }
 
 /* ── Titre ── */
@@ -32,19 +30,6 @@ h1 { font-size: 24px !important; font-weight: 400 !important; letter-spacing: -0
 h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 
 /* ── Dividers ── */
-/* ── Popover button — remove border, minimal style ── */
-[data-testid="stPopover"] button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: #bbb !important;
-    font-size: 12px !important;
-    padding: 2px 6px !important;
-    min-height: unset !important;
-    height: auto !important;
-}
-[data-testid="stPopover"] button:hover { color: #555 !important; }
-
 hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 1rem 0 !important; }
 
 /* ── Boutons ── */
@@ -261,95 +246,11 @@ if "prefill_b" not in st.session_state:
     st.session_state.prefill_b = None
 if "matrix_results" not in st.session_state:
     st.session_state["matrix_results"] = []
-if "token_logos" not in st.session_state:
-    st.session_state["token_logos"] = {}
-
-# ─── LOGOS + METADATA ──────────────────────────────────────────────────────────
-@st.cache_data(ttl=86400, show_spinner=False)
-def fetch_token_metadata(slugs_map: tuple, api_key: str) -> dict:
-    """
-    Récupère logo, symbol et name depuis CMC.
-    slugs_map : tuple de (label, cmc_slug)
-    Retourne dict {label: {logo, symbol, name}}
-    """
-    import requests
-    result = {label: {"logo": "", "symbol": "", "name": label} for label, _ in slugs_map}
-    if not api_key:
-        result["__error__"] = "Clé API_CMC manquante."
-        return result
-    try:
-        cmc_slugs = [cmc_slug for _, cmc_slug in slugs_map]
-        slug_to_label = {cmc_slug: label for label, cmc_slug in slugs_map}
-
-        r = requests.get(
-            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/info",
-            params={"slug": ",".join(cmc_slugs), "aux": "logo"},
-            headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"},
-            timeout=15,
-        )
-        if r.status_code == 200:
-            for coin in r.json().get("data", {}).values():
-                cmc_slug = coin.get("slug", "")
-                label = slug_to_label.get(cmc_slug, "")
-                if label:
-                    result[label] = {
-                        "logo":   coin.get("logo", ""),
-                        "symbol": coin.get("symbol", ""),
-                        "name":   coin.get("name", label),
-                    }
-        else:
-            result["__error__"] = f"HTTP {r.status_code}: {r.text[:300]}"
-    except Exception as e:
-        result["__error__"] = str(e)
-    return result
-
-def load_tokens_map() -> dict:
-    """Utilise le slug du fichier CSV directement comme slug CMC."""
-    return {label: slug for label, slug in CRYPTOS.items()}
-
-TOKEN_CMC_MAP = load_tokens_map()
-
-if not st.session_state["token_logos"]:
-    _cmc_key = st.secrets["API_CMC"] if "API_CMC" in st.secrets else ""
-    _slugs_map = tuple(TOKEN_CMC_MAP.items())
-    with st.spinner("Chargement des métadonnées tokens…"):
-        st.session_state["token_logos"] = fetch_token_metadata(_slugs_map, _cmc_key)
-
-def get_logo(name: str) -> str:
-    return st.session_state["token_logos"].get(name, {}).get("logo", "")
-
-def get_display_name(name: str) -> str:
-    """Retourne 'SYM · Name propre' ou le label par défaut."""
-    meta = st.session_state["token_logos"].get(name, {})
-    sym  = meta.get("symbol", "")
-    cmc_name = meta.get("name", name)
-    if sym and cmc_name:
-        return f"{sym} · {cmc_name}"
+def dn(name: str) -> str:
+    """Display name — retourne le label directement."""
     return name
 
-def dn(name: str) -> str:
-    """Display name propre depuis CMC, ou label par défaut."""
-    meta = st.session_state.get("token_logos", {}).get(name, {})
-    cmc_name = meta.get("name", "")
-    return cmc_name if cmc_name else name
-
-def logo_html(name: str, size: int = 18) -> str:
-    url = get_logo(name)
-    if not url:
-        return f"<span style='display:inline-block;width:{size}px;height:{size}px;border-radius:50%;background:#e0e0e0;'></span>"
-    return (f"<img src='{url}' style='width:{size}px;height:{size}px;"
-            f"border-radius:50%;object-fit:cover;vertical-align:middle;'>")
-
 # ─── CALCUL AUTO AU DÉMARRAGE ──────────────────────────────────────────────────
-@st.cache_data(ttl=3600, show_spinner=False)
-def load_all_prices(slugs: tuple, data_dir: str) -> dict:
-    """Charge tous les CSV en mémoire une seule fois (cache 1h)."""
-    prices = {}
-    for label, slug in zip(slugs[::2], slugs[1::2]):
-        s, _ = fetch_prices(slug, data_dir)
-        prices[label] = s
-    return prices
-
 def compute_pair(args):
     """Worker pour la parallélisation."""
     a, b, sa, sb = args
@@ -432,11 +333,7 @@ if not st.session_state["matrix_results"] or _stale:
 
     st.session_state["matrix_results"] = results_auto
     bar.empty()
-    if not results_auto:
-        st.warning(f"⚠️ Debug : {len(pairs)} paires totales, {len(filtered_pairs)} après filtre corr≥0.65, 0 résultats finaux. Vérifier les données.")
-        st.write(f"Prix chargés : {sum(1 for v in price_cache.values() if v is not None)}/{len(all_names)}")
-        st.write(f"Returns dict : {len(returns_dict)} tokens")
-        st.write(f"Corr matrix shape : {corr_matrix.shape}")
+
 
 # ══ MÉTRIQUES ══════════════════════════════════════════════════════════════════
 METRICS_COMPACT = [
@@ -496,9 +393,7 @@ for col, info in zip(cols, METRICS_COMPACT):
             </div>""",
             unsafe_allow_html=True
         )
-        with st.expander("?"):
-            st.markdown(f"**{info['name']}**")
-            st.markdown(info['detail'])
+
 
 st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
@@ -1347,41 +1242,4 @@ with tab_wr:
 
 
 with tab_logo:
-    st.caption("Test de récupération des logos CoinMarketCap.")
-
-    # Debug : afficher l'erreur si présente
-    logos_data = st.session_state.get("token_logos", {})
-    if "__error__" in logos_data:
-        st.error(f"Erreur API : {logos_data['__error__']}")
-    
-    _key_present = "API_CMC" in st.secrets
-    st.markdown(f"Clé API_CMC dans les secrets : **{'✅ trouvée' if _key_present else '❌ non trouvée'}**")
-    st.markdown(f"Logos récupérés : **{sum(1 for k, v in logos_data.items() if not k.startswith('__') and isinstance(v, dict) and v.get('logo'))}** / {len(CRYPTOS)}")
-
-    if st.button("🔄 Recharger les logos"):
-        st.session_state["token_logos"] = {}
-        st.rerun()
-
-    rows_html = ""
-    for name in CRYPTOS.keys():
-        img   = logo_html(name, 20)
-        dname = get_display_name(name)
-        cmc   = TOKEN_CMC_MAP.get(name, "—")
-        ok    = "✅" if get_logo(name) else "❌"
-        rows_html += (
-            f"<tr>"
-            f"<td style='padding:4px 8px'>{img}</td>"
-            f"<td style='padding:4px 8px;font-size:12px'>{dname}</td>"
-            f"<td style='padding:4px 8px;font-size:11px;color:#888'>{cmc}</td>"
-            f"<td style='padding:4px 8px'>{ok}</td>"
-            f"</tr>"
-        )
-    st.markdown(
-        f"<table style='border-collapse:collapse'><thead><tr>"
-        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Logo</th>"
-        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Token</th>"
-        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'>Slug CMC</th>"
-        f"<th style='padding:4px 8px;font-size:11px;color:#aaa;font-weight:400'></th>"
-        f"</tr></thead><tbody>{rows_html}</tbody></table>",
-        unsafe_allow_html=True
-    )
+    pass
