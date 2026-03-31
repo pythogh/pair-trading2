@@ -490,9 +490,13 @@ else:
         )
 
 
+# ── Analyse ───────────────────────────────────────────────────────────────────
+st.divider()
+st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 12px;color:#111'>Analyse</h2>", unsafe_allow_html=True)
+
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
-st.markdown("<p style='font-size:11px;color:#888;margin:8px 0 8px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:11px;color:#888;margin:0 0 8px'>Paramètres de stratégie (données horaires)</p>", unsafe_allow_html=True)
 gp1, gp2, gp3, gp4 = st.columns([0.4, 0.4, 0.4, 0.4])
 with gp1:
     entry_z = st.number_input("Entrée z", value=1.5, step=0.1, min_value=0.5, max_value=5.0, key="bt_entry")
@@ -1241,8 +1245,10 @@ with tab_wr:
                 margin=dict(t=120, b=10, l=120, r=10),
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 shapes=grid_shapes,
-                xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90),
-                yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False),
+                xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90,
+                           scaleanchor="y", constrain="domain"),
+                yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False,
+                           constrain="domain"),
             )
 
             # Clic sur une cellule → prefill backtest
