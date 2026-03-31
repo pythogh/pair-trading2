@@ -464,22 +464,14 @@ METRICS_COMPACT = [
     },
 ]
 
-# Charger MathJax une seule fois
-st.markdown("""
-<script>
-window.MathJax = {tex: {inlineMath: [['$','$'],['\\(','\\)']]}, svg: {fontCache: 'global'}};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-""", unsafe_allow_html=True)
-
 cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
             f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
-            <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
-            <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
-            <div style="text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</div>
+            <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['name']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 14px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
+            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
             <p style="font-size:9px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
@@ -1135,7 +1127,7 @@ with tab_wr:
         if st.session_state.get("wr_params") != current_params:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Contrôles toujours visibles
-    mc1, _, mc4 = st.columns([1, 1.5, 1])
+    _, mc1, mc4, _ = st.columns([0.5, 1, 1, 0.5])
     with mc1:
         metric_choice = st.selectbox("Métrique affichée", [
             "Win Rate", "Nb Trades", "Z-Score"
