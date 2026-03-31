@@ -1130,7 +1130,7 @@ with tab_wr:
     mc1, _, mc4 = st.columns([1, 1.5, 1])
     with mc1:
         metric_choice = st.selectbox("Métrique affichée", [
-            "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
+            "Win Rate", "Nb Trades", "Z-Score"
         ], key="mat_metric")
     with mc4:
         # Filtre adaptatif selon la métrique
@@ -1138,14 +1138,8 @@ with tab_wr:
             threshold_val = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter") / 100
         elif metric_choice == "Nb Trades":
             threshold_val = float(st.slider("Trades ≥", 1, 50, 3, 1, key="wr_filter"))
-        elif metric_choice == "Corrélation":
-            threshold_val = st.slider("Corrélation ≥", 0.0, 1.0, 0.7, 0.05, key="wr_filter")
         elif metric_choice == "Z-Score":
             threshold_val = st.slider("|Z-Score| ≥", 0.0, 4.0, 1.0, 0.1, key="wr_filter")
-        elif metric_choice == "Half-Life (j)":
-            threshold_val = st.slider("Half-Life ≤ (j)", 1, 30, 10, 1, key="wr_filter")
-        elif metric_choice == "Co-intégration p":
-            threshold_val = st.slider("p-value ≤", 0.01, 0.2, 0.05, 0.01, key="wr_filter")
         else:
             threshold_val = 0.6
     nt_min = 1
@@ -1158,27 +1152,8 @@ with tab_wr:
         z_matrix  = pd.DataFrame(st.session_state.get("z_matrix", {}))
 
 
-        # Construire la matrice de la métrique choisie depuis matrix_results
-        # Pour Z-Score, Corrélation, Half-Life, Co-int → depuis matrix_results
-        metric_matrix = pd.DataFrame(index=labels, columns=labels, dtype=object)
-        if metric_choice != "Win Rate" and metric_choice != "Nb Trades":
-            key_map = {
-                "Z-Score":           "Z-Score",
-                "Corrélation":       "Corrélation",
-                "Half-Life (j)":     "Half-Life",
-                "Co-intégration p":  "Co-intégration p",
-            }
-            mr_key = key_map.get(metric_choice)
-            mr = {r["Paire"]: r for r in st.session_state.get("matrix_results", [])}
-            for a in labels:
-                for b in labels:
-                    if a == b:
-                        metric_matrix.loc[a, b] = None
-                        continue
-                    paire_key = f"{dn(a)} / {dn(b)}"
-                    paire_key_rev = f"{dn(b)} / {dn(a)}"
-                    row = mr.get(paire_key) or mr.get(paire_key_rev)
-                    metric_matrix.loc[a, b] = row[mr_key] if row and mr_key in row else None
+        # Pour Z-Score : utiliser z_matrix (calculé lors du calcul WinRate)
+        metric_matrix = z_matrix if metric_choice == "Z-Score" else pd.DataFrame()
 
         # Garder seulement les tokens qui ont au moins une paire au-dessus des seuils
         # Le filtre WinRate s'applique toujours comme filtre de base de qualité
@@ -1212,13 +1187,7 @@ with tab_wr:
                     raw = safe_float(metric_matrix.loc[a, b] if (a in metric_matrix.index and b in metric_matrix.columns) else None)
                     if raw is None:
                         continue
-                    if metric_choice == "Corrélation" and raw < threshold_val:
-                        continue
-                    elif metric_choice == "Z-Score" and abs(raw) < threshold_val:
-                        continue
-                    elif metric_choice == "Half-Life (j)" and raw > threshold_val:
-                        continue
-                    elif metric_choice == "Co-intégration p" and raw > threshold_val:
+                    if metric_choice == "Z-Score" and abs(raw) < threshold_val:
                         continue
                     continue
                 if has_nt:
