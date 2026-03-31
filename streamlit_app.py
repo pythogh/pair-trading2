@@ -1127,22 +1127,17 @@ with tab_wr:
         if st.session_state.get("wr_params") != current_params:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Contrôles toujours visibles
-    mc1, mc2, _, mc4 = st.columns([1, 0.35, 1.5, 1])
+    mc1, _, mc4 = st.columns([1, 1.5, 1])
     with mc1:
         metric_choice = st.selectbox("Métrique affichée", [
             "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
         ], key="mat_metric")
-    with mc2:
-        st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-        if st.button("▶ Analyser", key="mat_run_btn"):
-            st.session_state["_mat_calc"] = True
-        st.markdown("</div>", unsafe_allow_html=True)
     with mc4:
         # Filtre adaptatif selon la métrique
         if metric_choice == "Win Rate":
             threshold_val = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter") / 100
         elif metric_choice == "Nb Trades":
-            threshold_val = st.slider("Trades ≥", 1, 50, 3, 1, key="wr_filter") / 100  # normalized unused
+            threshold_val = float(st.slider("Trades ≥", 1, 50, 3, 1, key="wr_filter"))
         elif metric_choice == "Corrélation":
             threshold_val = st.slider("Corrélation ≥", 0.0, 1.0, 0.7, 0.05, key="wr_filter")
         elif metric_choice == "Z-Score":
@@ -1154,7 +1149,7 @@ with tab_wr:
         else:
             threshold_val = 0.6
     nt_min = 1
-    wr_min = int(threshold_val * 100) if metric_choice == "Win Rate" else 0
+    wr_min = int(threshold_val * 100) if metric_choice == "Win Rate" else 0  # used only for WR filter
 
     if "wr_matrix" in st.session_state:
         labels    = st.session_state["wr_labels"]
@@ -1202,11 +1197,18 @@ with tab_wr:
             for b in labels:
                 if a == b:
                     continue
-                wr = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
-                if wr is None or wr < threshold:
-                    continue
-                # Filtre adaptatif selon la métrique affichée
-                if metric_choice != "Win Rate":
+
+                if metric_choice == "Win Rate":
+                    wr = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
+                    if wr is None or wr < threshold_val:
+                        continue
+
+                elif metric_choice == "Nb Trades":
+                    nt = safe_float(nt_matrix.loc[a, b] if (not nt_matrix.empty and a in nt_matrix.index and b in nt_matrix.columns) else None)
+                    if nt is None or int(nt) < int(threshold_val):
+                        continue
+
+                else:
                     raw = safe_float(metric_matrix.loc[a, b] if (a in metric_matrix.index and b in metric_matrix.columns) else None)
                     if raw is None:
                         continue
@@ -1218,10 +1220,6 @@ with tab_wr:
                         continue
                     elif metric_choice == "Co-intégration p" and raw > threshold_val:
                         continue
-                    elif metric_choice == "Nb Trades":
-                        nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
-                        if nt is None or int(nt) < int(threshold_val * 50):
-                            continue
                     continue
                 if has_nt:
                     nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
