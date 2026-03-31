@@ -469,50 +469,13 @@ METRICS_COMPACT = [
     },
 ]
 
-# CSS side panel — injecté une fois
-st.markdown("""
-<style>
-.metric-card { position: relative; cursor: pointer; }
-.side-panel-overlay {
-    display: none; position: fixed; top: 0; right: 0; bottom: 0;
-    width: 340px; background: #fff; z-index: 9999;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-    padding: 32px 28px; overflow-y: auto;
-    border-left: 1px solid #eee;
-    flex-direction: column;
-}
-.side-panel-overlay.open { display: flex; }
-.side-panel-title { font-size: 15px; font-weight: 600; color: #111; margin: 0 0 6px; }
-.side-panel-seuil { font-size: 11px; color: #888; margin: 0 0 16px; }
-.side-panel-body { font-size: 12px; color: #444; line-height: 1.7; }
-.side-panel-close {
-    position: absolute; top: 16px; right: 20px;
-    font-size: 20px; cursor: pointer; color: #888;
-    background: none; border: none; padding: 0;
-}
-.side-panel-close:hover { color: #111; }
-</style>
-<div id="metricPanel" class="side-panel-overlay">
-    <button class="side-panel-close" onclick="document.getElementById('metricPanel').classList.remove('open')">✕</button>
-    <p class="side-panel-title" id="panelTitle"></p>
-    <p class="side-panel-seuil" id="panelSeuil"></p>
-    <div class="side-panel-body" id="panelBody"></div>
-</div>
-<script>
-function openMetricPanel(name, seuil, detail) {
-    document.getElementById('panelTitle').innerText = name;
-    document.getElementById('panelSeuil').innerText = 'Seuil : ' + seuil;
-    document.getElementById('panelBody').innerText = detail;
-    document.getElementById('metricPanel').classList.add('open');
-}
-</script>
-""", unsafe_allow_html=True)
+
 
 cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div class="metric-card" onclick="openMetricPanel('{info['name']}', '{info['seuil']}', `{info['detail']}`)" style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:190px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:190px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;transition:background 0.2s,border-color 0.2s,box-shadow 0.2s;" onmouseover="this.style.background='#f8f8f7';this.style.borderColor='#aaa';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.07)'" onmouseout="this.style.background='#ffffff';this.style.borderColor='#ccc';this.style.boxShadow='none'">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
