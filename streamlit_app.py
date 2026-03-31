@@ -32,6 +32,19 @@ h1 { font-size: 24px !important; font-weight: 400 !important; letter-spacing: -0
 h2, h3 { font-size: 13px !important; font-weight: 500 !important; }
 
 /* ── Dividers ── */
+/* ── Popover button — remove border, minimal style ── */
+[data-testid="stPopover"] button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #bbb !important;
+    font-size: 12px !important;
+    padding: 2px 6px !important;
+    min-height: unset !important;
+    height: auto !important;
+}
+[data-testid="stPopover"] button:hover { color: #555 !important; }
+
 hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 1rem 0 !important; }
 
 /* ── Boutons ── */
@@ -483,7 +496,7 @@ for col, info in zip(cols, METRICS_COMPACT):
             </div>""",
             unsafe_allow_html=True
         )
-        with st.popover("ⓘ En savoir plus", use_container_width=True):
+        with st.popover("?", use_container_width=False):
             st.markdown(f"**{info['name']}**")
             st.markdown(info['detail'])
 
