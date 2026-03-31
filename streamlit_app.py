@@ -404,6 +404,7 @@ if not st.session_state["matrix_results"] or _stale:
                 continue
             results_auto.append({
                 "Paire":            f"{dn(a)} / {dn(b)}",
+                "_a": a, "_b": b,
                 "Corrélation":      m["Corrélation"],
                 "Hedge Ratio β":    m["Hedge Ratio (β)"],
                 "Co-intégration p": m["Co-intégration (p)"],
@@ -1016,13 +1017,15 @@ with tab_wr:
                     nt_matrix.loc[b, a] = None
                     continue
                 m_pair = compute_metrics(sa, sb, a, b)
-                if m_pair is None:
+                if m_pair is None or m_pair.get("_skip"):
                     wr_matrix.loc[a, b] = None
                     wr_matrix.loc[b, a] = None
                     nt_matrix.loc[a, b] = None
                     nt_matrix.loc[b, a] = None
                     continue
 
+                if "z_score" not in m_pair:
+                    continue
                 z_s = m_pair["z_score"].dropna()
                 df_p = m_pair["df"]
                 beta_p = m_pair["Hedge Ratio (β)"]
@@ -1083,7 +1086,7 @@ with tab_wr:
                     z_matrix.loc[a, b] = None
                     continue
                 m_pair = compute_metrics(sa, sb, a, b)
-                z_matrix.loc[a, b] = m_pair["Z-Score"] if m_pair else None
+                z_matrix.loc[a, b] = m_pair.get("Z-Score") if m_pair and not m_pair.get("_skip") else None
 
         _progress_container.empty()
         st.session_state["wr_matrix"] = wr_matrix.to_dict()
