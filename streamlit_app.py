@@ -581,7 +581,7 @@ st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
 
 # ── Onglets Backtest / Winrate ────────────────────────────────────────────────
 st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-tab_wr, tab_bt, tab_logo = st.tabs(["🔍 Backtest", "🏆 Win Rate",  " "])
+tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest",  " "])
 
 with tab_bt:
 
