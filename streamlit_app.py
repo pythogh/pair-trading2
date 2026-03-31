@@ -475,14 +475,17 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:190px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;transition:background 0.2s,border-color 0.2s,box-shadow 0.2s;" onmouseover="this.style.background='#f8f8f7';this.style.borderColor='#aaa';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.07)'" onmouseout="this.style.background='#ffffff';this.style.borderColor='#ccc';this.style.boxShadow='none'">
+            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px 10px;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['name']}</p>
-            <p style="font-size:10px;color:#aaa;margin:0 0 14px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
-            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
-            <p style="font-size:9px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
+            <p style="font-size:10px;color:#aaa;margin:0 0 10px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
+            <p style="font-size:12px;font-family:Georgia,serif;text-align:center;margin:0 0 10px;color:#333">{info['formule']}</p>
+            <p style="font-size:9px;color:#999;line-height:1.5;margin:0">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
         )
+        with st.popover("ⓘ En savoir plus", use_container_width=True):
+            st.markdown(f"**{info['name']}**")
+            st.markdown(info['detail'])
 
 st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
