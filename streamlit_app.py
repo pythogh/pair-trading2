@@ -1109,7 +1109,7 @@ with tab_wr:
             st.warning("⚠️ Les paramètres ont changé — recalcule la matrice pour mettre à jour.")
     # Affichage — depuis session_state si disponible
     # Contrôles toujours visibles
-    mc1, mc2, mc4 = st.columns([1, 0.5, 1])
+    mc1, mc2, _, mc4 = st.columns([1, 0.5, 2, 1])
     with mc1:
         metric_choice = st.selectbox("Métrique affichée", [
             "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
@@ -1298,9 +1298,11 @@ with tab_wr:
             )
 
             st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
-            _, col_center, _ = st.columns([1, matrix_w // 10, 1])
+            st.markdown(f"<div style='display:flex;justify-content:center'>", unsafe_allow_html=True)
+            _, col_center, _ = st.columns([1, max(matrix_w // 10, 2), 1])
             with col_center:
                 sel = st.plotly_chart(fig_wr, use_container_width=False, key="wr_heatmap")
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 
