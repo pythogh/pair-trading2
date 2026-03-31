@@ -1,4 +1,3 @@
-# App template
+# Template
 
 https://pair-trades.streamlit.app/
-[![Open in Streamlit]((https://pair-trades.streamlit.app/))
