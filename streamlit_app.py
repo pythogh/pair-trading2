@@ -660,12 +660,12 @@ with tab_bt:
                 sharpe     = (rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0
 
                 pnl_color  = "#0F6E56" if total_pnl >= 0 else "#A32D2D"
-                pnl_icon   = ""
+                pnl_icon   = "▲" if total_pnl >= 0 else "▼"
                 wr_color   = "#0F6E56" if win_rate >= 0.5 else "#A32D2D"
-                wr_icon    = ""
+                wr_icon    = "▲" if win_rate >= 0.5 else "▼"
                 dd_color   = "#A32D2D" if max_dd < 0 else "#0F6E56"
                 sh_color   = "#0F6E56" if sharpe >= 1 else ("#854F0B" if sharpe >= 0 else "#A32D2D")
-                sh_icon    = "" if sharpe >= 0 else ""
+                sh_icon    = "▲" if sharpe >= 1 else ("—" if sharpe >= 0 else "▼") if sharpe >= 0 else ""
 
                 bt_cards = [
                     ("Trades",       str(n_trades),              "#333",     ""),
@@ -1201,9 +1201,9 @@ with tab_wr:
                 hover_vals.append(row_h)
 
             n = len(filtered_labels)
-            cell_size = 70
+            cell_size = 48
             matrix_w = n * cell_size + 120
-            matrix_h = n * cell_size + 120  # même taille — labels dans le canvas
+            matrix_h = n * cell_size + 120
 
             fig_wr = go.Figure(go.Heatmap(
                 z=z_vals, x=display_labels, y=display_labels,
@@ -1224,7 +1224,7 @@ with tab_wr:
             fig_wr.update_layout(
                 width=matrix_w, height=matrix_h,
                 margin=dict(t=0, b=10, l=120, r=10, pad=0),
-                plot_bgcolor="#f0f0ee", paper_bgcolor="#fff",
+                plot_bgcolor="#f7f7f6", paper_bgcolor="#fff",
                 xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90, automargin=True),
                 yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False, automargin=True),
             )
