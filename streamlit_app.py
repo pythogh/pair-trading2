@@ -1217,22 +1217,17 @@ with tab_wr:
                     [1.0,  "#0F6E56"],
                 ],
                 zmin=0, zmax=1, showscale=False,
+                xgap=2, ygap=2,
             ))
-            # Shapes : quadrillage
-            grid_shapes = []
-            for i in range(n + 1):
-                # Lignes verticales — limitées à la zone de données (yref="y")
-                grid_shapes.append(dict(type="line", xref="x", yref="y",
-                    x0=i-0.5, x1=i-0.5, y0=-0.5, y1=n-0.5, line=dict(color="#ddd", width=1)))
-                # Lignes horizontales — limitées à la zone de données (xref="x")
-                grid_shapes.append(dict(type="line", xref="x", yref="y",
-                    x0=-0.5, x1=n-0.5, y0=i-0.5, y1=i-0.5, line=dict(color="#ddd", width=1)))
+
+            # Marge top calculée selon longueur max des labels
+            max_label_len = max(len(l) for l in display_labels) if display_labels else 10
+            top_margin = min(max_label_len * 7, 180)
 
             fig_wr.update_layout(
                 width=matrix_px, height=matrix_px,
-                margin=dict(t=120, b=10, l=120, r=10),
-                plot_bgcolor="#fff", paper_bgcolor="#fff",
-                shapes=grid_shapes,
+                margin=dict(t=top_margin, b=10, l=120, r=10),
+                plot_bgcolor="#f0f0ee", paper_bgcolor="#fff",
                 xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90,
                            scaleanchor="y", constrain="domain"),
                 yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False,
