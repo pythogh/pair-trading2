@@ -431,38 +431,46 @@ METRICS_COMPACT = [
         "emoji": "📊",
         "name": "Corrélation",
         "seuil": "> 0.7",
-        "formule": "ρ = cov(r<sub>A</sub>, r<sub>B</sub>) / (σ<sub>A</sub> · σ<sub>B</sub>)",
+        "formule": r"$$\rho = \frac{\text{cov}(r_A,\, r_B)}{\sigma_A \cdot \sigma_B}$$",
         "note": "Calculée sur les rendements journaliers (pas les prix). Mesure si les deux actifs bougent dans le même sens.",
     },
     {
         "emoji": "⚖️",
         "name": "Hedge Ratio β",
         "seuil": "Pas de seuil",
-        "formule": "β = cov(A, B) / var(B)",
+        "formule": r"$$\beta = \frac{\text{cov}(A,\, B)}{\text{var}(B)}$$",
         "note": "Régression OLS de A sur B. Indique combien d'unités de B couvrent 1 unité de A.",
     },
     {
         "emoji": "🔬",
         "name": "Co-intégration p",
         "seuil": "< 0.05",
-        "formule": "ADF(A − βB − α) → p-value",
+        "formule": r"$$\text{ADF}(A - \beta B - \alpha) \to p$$",
         "note": "Test de stationnarité du spread. Si p < 0.05, l'écart entre les deux prix revient toujours à sa moyenne.",
     },
     {
         "emoji": "⏳",
         "name": "Half-Life",
         "seuil": "2–5 jours (48–120h)",
-        "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
+        "formule": r"$$t_{1/2} = \frac{\ln 2}{\lambda}, \quad \Delta s_t = \lambda s_{t-1}$$",
         "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 168h (7j).",
     },
     {
         "emoji": "🌡️",
         "name": "Z-Score",
-        "seuil": "Signal si |z| > 2",
-        "formule": "z = (s<sub>t</sub> − μ<sub>30</sub>) / σ<sub>30</sub>",
+        "seuil": "Signal si |z| > 1.5",
+        "formule": r"$$z = \frac{s_t - \mu_{168}}{\sigma_{168}}$$",
         "note": "Fenêtre glissante 7 jours (168h). Un z > +1.5 se produit ~7% du temps — signal de trading.",
     },
 ]
+
+# Charger MathJax une seule fois
+st.markdown("""
+<script>
+window.MathJax = {tex: {inlineMath: [['$','$'],['\\(','\\)']]}, svg: {fontCache: 'global'}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+""", unsafe_allow_html=True)
 
 cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
@@ -471,7 +479,7 @@ for col, info in zip(cols, METRICS_COMPACT):
             f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['emoji']} {info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px">Seuil : {info['seuil']}</p>
-            <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
+            <div style="text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</div>
             <p style="font-size:9px;color:#999;line-height:1.5;margin:0;flex:1">{info['note']}</p>
             </div>""",
             unsafe_allow_html=True
