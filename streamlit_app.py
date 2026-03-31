@@ -586,6 +586,21 @@ tab_wr, tab_bt, tab_logo = st.tabs(["🏆 Win Rate", "🔍 Backtest", " "])
 with tab_bt:
 
     keys = list(CRYPTOS.keys())
+
+    # Auto-prefill avec la première paire valide si rien n'est déjà sélectionné
+    if not st.session_state.prefill_a and st.session_state.get("matrix_results"):
+        valid = [r for r in st.session_state["matrix_results"] if r.get("Verdict") == "✅ Valide"]
+        if valid:
+            first = valid[0]["Paire"].split(" / ")
+            # Retrouver les labels internes depuis le display name
+            dn_rev = {dn(k): k for k in keys}
+            la = dn_rev.get(first[0])
+            lb = dn_rev.get(first[1])
+            if la and lb:
+                st.session_state.prefill_a = la
+                st.session_state.prefill_b = lb
+                st.session_state["_bt_auto"] = True  # déclencher auto-calcul
+
     default_a = keys.index(st.session_state.prefill_a) if st.session_state.prefill_a in keys else 0
     default_b = keys.index(st.session_state.prefill_b) if st.session_state.prefill_b in keys else min(1, len(keys) - 1)
 
@@ -601,11 +616,14 @@ with tab_bt:
 
     capital = 1000
 
+    # Auto-calcul au premier chargement
+    auto_run = st.session_state.pop("_bt_auto", False)
+
     if name_a == name_b:
         st.warning("Choisis deux actifs différents.")
     else:
         # Lancement de l'analyse au clic — stocke les résultats dans session_state
-        if analyse:
+        if analyse or auto_run:
             s_a, err_a = fetch_prices(CRYPTOS[name_a])
             s_b, err_b = fetch_prices(CRYPTOS[name_b])
             if err_a:
