@@ -19,13 +19,13 @@ st.markdown("""
 /* ── Base ── */
 html, body, [class*="css"], .stMarkdown, .stText, p, span, div, table, th, td, input {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    font-size: 12px !important;
+    font-size: 13px !important;
     -webkit-font-smoothing: antialiased !important;
 }
 .stApp { background: #fefefe !important; }
 
 .block-container { background: #fefefe !important; }
-.block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1500px !important; }
+.block-container { padding: 1.5rem 2rem 2rem !important; max-width: 1200px !important; }
 
 /* ── Titre ── */
 h1 { font-size: 24px !important; font-weight: 400 !important; letter-spacing: -0.03em !important; color: #111 !important; }
@@ -38,7 +38,7 @@ hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 
 .stButton > button {
     background: #111 !important; color: #fff !important;
     border: none !important; border-radius: 6px !important;
-    font-size: 11px !important; font-weight: 400 !important;
+    font-size: 12px !important; font-weight: 400 !important;
     height: 32px !important; padding: 0 14px !important;
     letter-spacing: 0.01em !important;
     transition: background 0.15s !important;
@@ -433,6 +433,7 @@ METRICS_COMPACT = [
         "seuil": "> 0.7",
         "formule": "ρ = cov(r<sub>A</sub>, r<sub>B</sub>) / (σ<sub>A</sub> · σ<sub>B</sub>)",
         "note": "Calculée sur les rendements journaliers (pas les prix). Mesure si les deux actifs bougent dans le même sens.",
+        "detail": "On trace un scatterplot des rendements journaliers de A (axe X) et B (axe Y). Si les points forment un cigare diagonal, les actifs sont corrélés. Un ρ > 0.7 confirme qu'ils réagissent aux mêmes news. En dessous de 0.7, la relation est trop faible pour construire une stratégie fiable.",
     },
     {
         "emoji": "⚖️",
@@ -440,6 +441,7 @@ METRICS_COMPACT = [
         "seuil": "Pas de seuil",
         "formule": "β = cov(A, B) / var(B)",
         "note": "Régression OLS de A sur B. Indique combien d'unités de B couvrent 1 unité de A.",
+        "detail": "On trace la droite de régression OLS entre les prix de A (Y) et B (X). La pente β indique la proportion. Si β = 1.2, quand B bouge de 1$, A bouge de 1.2$. Pour être neutre, acheter 100 unités de A implique de vendre 120 unités de B. Le β détermine aussi l'allocation du capital entre les deux jambes.",
     },
     {
         "emoji": "🔬",
@@ -447,6 +449,7 @@ METRICS_COMPACT = [
         "seuil": "< 0.05",
         "formule": "ADF(A − βB − α) → p-value",
         "note": "Test de stationnarité du spread. Si p < 0.05, l'écart entre les deux prix revient toujours à sa moyenne.",
+        "detail": "On calcule le Spread = Prix_A − (β × Prix_B). On applique le test ADF sur ce spread. Une p-value < 0.05 prouve mathématiquement qu'il existe une force de rappel vers la moyenne — comme un élastique. Sans co-intégration, le spread peut dériver indéfiniment et la paire est 'cassée'.",
     },
     {
         "emoji": "⏳",
@@ -454,6 +457,7 @@ METRICS_COMPACT = [
         "seuil": "2–5 jours (48–120h)",
         "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
         "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 168h (7j).",
+        "detail": "La Half-Life mesure le temps pour que 50% d'un écart anormal se referme. On modélise la vitesse de retour à la moyenne par régression de Δspread sur spread(t-1). Si t½ = 3 jours, le trade moyen dure 3 jours. Trop court (< 1j) → frais trop élevés. Trop long (> 20j) → capital immobilisé.",
     },
     {
         "emoji": "🌡️",
@@ -461,14 +465,38 @@ METRICS_COMPACT = [
         "seuil": "Signal si |z| > 1.5",
         "formule": "z = (s<sub>t</sub> − μ<sub>168</sub>) / σ<sub>168</sub>",
         "note": "Fenêtre glissante 7 jours (168h). Un z > +1.5 se produit ~7% du temps — signal de trading.",
+        "detail": "Le z-score mesure l'écart du spread par rapport à sa moyenne récente, en unités d'écart-type. z = +2 signifie que le spread est 2σ au-dessus de sa moyenne — A est cher par rapport à B. Signal : SHORT A / LONG B. Le retour vers z = 0 représente le profit attendu. Fenêtre glissante 168h (7 jours).",
     },
 ]
+
+# CSS tooltip global — injecté une fois
+st.markdown("""
+<style>
+.metric-card { position: relative; }
+.metric-tooltip {
+    display: none; position: absolute; z-index: 999;
+    bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    width: 260px; background: #111; color: #f5f5f5;
+    font-size: 11px; line-height: 1.6; padding: 12px 14px;
+    border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+}
+.metric-tooltip::after {
+    content: ''; position: absolute; top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #111;
+}
+.metric-card:hover .metric-tooltip { display: block; }
+.tooltip-trigger { cursor: help; }
+</style>
+""", unsafe_allow_html=True)
 
 cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:190px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div class="metric-card tooltip-trigger" style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:215px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            <div class="metric-tooltip">{info['detail']}</div>
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
