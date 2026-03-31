@@ -468,7 +468,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:200px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
+            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:18px 16px 16px;height:190px;display:flex;flex-direction:column;box-sizing:border-box;background:#ffffff;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 14px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
             <p style="font-size:13px;font-family:Georgia,serif;text-align:center;margin:0 0 14px;color:#333;flex-shrink:0">{info['formule']}</p>
