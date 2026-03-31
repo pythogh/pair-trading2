@@ -368,19 +368,23 @@ if not st.session_state["matrix_results"] or _stale:
         if s is not None:
             returns_dict[name] = s.pct_change().dropna()
 
-    # Aligner toutes les séries et calculer la matrice de corrélation d'un coup
+    # Aligner sur l'index commun et calculer la matrice de corrélation
     if returns_dict:
-        returns_df = pd.DataFrame(returns_dict).dropna()
-        corr_matrix = returns_df.corr()
+        returns_df = pd.DataFrame(returns_dict)  # aligne automatiquement sur index commun
+        returns_df = returns_df.dropna(how="all")  # retire les lignes toutes NaN
+        corr_matrix = returns_df.corr(min_periods=50)  # min 50 points communs
     else:
         corr_matrix = pd.DataFrame()
 
     # 1. Pré-filtrage : ne garder que les paires avec |corr| >= 0.65
-    filtered_pairs = [
-        (a, b) for a, b in pairs
-        if a in corr_matrix.index and b in corr_matrix.columns
-        and abs(corr_matrix.loc[a, b]) >= 0.65
-    ]
+    filtered_pairs = []
+    for a, b in pairs:
+        if a not in corr_matrix.index or b not in corr_matrix.columns:
+            filtered_pairs.append((a, b))  # inclure si pas dans la matrice (calcul classique)
+            continue
+        c = corr_matrix.loc[a, b]
+        if pd.isna(c) or abs(c) >= 0.65:
+            filtered_pairs.append((a, b))  # inclure si NaN (sécurité) ou corrélation ok
     skipped = len(pairs) - len(filtered_pairs)
     bar.progress(0.2, text=f"{skipped} paires éliminées par corrélation, {len(filtered_pairs)} restantes…")
 
