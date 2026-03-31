@@ -38,7 +38,7 @@ hr { border: none !important; border-top: 1px solid #f0f0ee !important; margin: 
 .stButton > button {
     background: #111 !important; color: #fff !important;
     border: none !important; border-radius: 6px !important;
-    font-size: 12px !important; font-weight: 400 !important;
+    font-size: 11px !important; font-weight: 400 !important;
     height: 32px !important; padding: 0 14px !important;
     letter-spacing: 0.01em !important;
     transition: background 0.15s !important;
