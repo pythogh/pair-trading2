@@ -1220,18 +1220,14 @@ with tab_wr:
                 xgap=2, ygap=2,
             ))
 
-            # Marge top calculée selon longueur max des labels
-            max_label_len = max(len(l) for l in display_labels) if display_labels else 10
-            top_margin = min(max_label_len * 7, 180)
-
             fig_wr.update_layout(
                 width=matrix_px, height=matrix_px,
-                margin=dict(t=top_margin, b=10, l=120, r=10),
+                margin=dict(t=0, b=10, l=120, r=10, pad=0),
                 plot_bgcolor="#f0f0ee", paper_bgcolor="#fff",
                 xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90,
-                           scaleanchor="y", constrain="domain"),
+                           scaleanchor="y", constrain="domain", automargin=True),
                 yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False,
-                           constrain="domain"),
+                           constrain="domain", automargin=True),
             )
 
             # Clic sur une cellule → prefill backtest
