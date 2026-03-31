@@ -416,6 +416,11 @@ if not st.session_state["matrix_results"] or _stale:
 
     st.session_state["matrix_results"] = results_auto
     bar.empty()
+    if not results_auto:
+        st.warning(f"⚠️ Debug : {len(pairs)} paires totales, {len(filtered_pairs)} après filtre corr≥0.65, 0 résultats finaux. Vérifier les données.")
+        st.write(f"Prix chargés : {sum(1 for v in price_cache.values() if v is not None)}/{len(all_names)}")
+        st.write(f"Returns dict : {len(returns_dict)} tokens")
+        st.write(f"Corr matrix shape : {corr_matrix.shape}")
 
 # ══ MÉTRIQUES ══════════════════════════════════════════════════════════════════
 METRICS_COMPACT = [
