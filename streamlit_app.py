@@ -1221,10 +1221,12 @@ with tab_wr:
             # Shapes : quadrillage
             grid_shapes = []
             for i in range(n + 1):
-                grid_shapes.append(dict(type="line", xref="x", yref="paper",
-                    x0=i-0.5, x1=i-0.5, y0=0, y1=1, line=dict(color="#ddd", width=1)))
-                grid_shapes.append(dict(type="line", xref="paper", yref="y",
-                    x0=0, x1=1, y0=i-0.5, y1=i-0.5, line=dict(color="#ddd", width=1)))
+                # Lignes verticales — limitées à la zone de données (yref="y")
+                grid_shapes.append(dict(type="line", xref="x", yref="y",
+                    x0=i-0.5, x1=i-0.5, y0=-0.5, y1=n-0.5, line=dict(color="#ddd", width=1)))
+                # Lignes horizontales — limitées à la zone de données (xref="x")
+                grid_shapes.append(dict(type="line", xref="x", yref="y",
+                    x0=-0.5, x1=n-0.5, y0=i-0.5, y1=i-0.5, line=dict(color="#ddd", width=1)))
 
             fig_wr.update_layout(
                 width=matrix_px, height=matrix_px,
