@@ -365,7 +365,7 @@ METRICS_COMPACT = [
         "emoji": "⏳",
         "name": "Half-Life",
         "seuil": "2–5 jours (48–120h)",
-        "formule": "t<sub>½</sub> = ln(2) / λ &nbsp;&nbsp; Δs<sub>t</sub> = λ · s<sub>t−1</sub>",
+        "formule": "t<sub>½</sub> = ln(2) / λ",
         "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 168h (7j).",
         "detail": "La Half-Life mesure le temps pour que 50% d'un écart anormal se referme. On modélise la vitesse de retour à la moyenne par régression de Δspread sur spread(t-1). Si t½ = 3 jours, le trade moyen dure 3 jours. Trop court (< 1j) → frais trop élevés. Trop long (> 20j) → capital immobilisé.",
     },
@@ -385,7 +385,7 @@ cols = st.columns(5)
 for col, info in zip(cols, METRICS_COMPACT):
     with col:
         st.markdown(
-            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px 10px;background:#ffffff;">
+            f"""<div style="border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px 10px;background:#ffffff;min-height:190px;">
             <p style="font-size:12px;font-weight:600;margin:0 0 3px;color:#111">{info['name']}</p>
             <p style="font-size:10px;color:#aaa;margin:0 0 10px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;vertical-align:middle"></span>Seuil : {info['seuil']}</p>
             <p style="font-size:12px;font-family:Georgia,serif;text-align:center;margin:0 0 10px;color:#333">{info['formule']}</p>
