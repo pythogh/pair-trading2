@@ -924,8 +924,10 @@ with tab_bt:
 
 with tab_wr:
 
-    if st.session_state.get("_mat_calc"):
-        st.session_state.pop("_mat_calc", None)  # clear immédiatement
+    if st.button("▶ Lancer le calcul", key="_mat_calc_btn", use_container_width=False):
+        st.session_state["_mat_calc"] = True
+
+    if st.session_state.pop("_mat_calc", False):
         all_names = list(CRYPTOS.keys())
         n = len(all_names)
 
@@ -1045,10 +1047,7 @@ with tab_wr:
             "Win Rate", "Nb Trades", "Z-Score", "Corrélation", "Half-Life (j)", "Co-intégration p"
         ], key="mat_metric")
     with mc2:
-        st.markdown("<div style='margin-top:22px'>", unsafe_allow_html=True)
-        if st.button("Analyser", key="mat_run"):
-            st.session_state["_mat_calc"] = True
-        st.markdown("</div>", unsafe_allow_html=True)
+        pass  # bouton déplacé au dessus
     with mc4:
         wr_min = st.slider("Win Rate ≥", 0, 100, 60, 5, format="%d%%", key="wr_filter")
     nt_min = 1
@@ -1145,20 +1144,7 @@ with tab_wr:
                     val = safe_float(wr_matrix.loc[a, b] if (a in wr_matrix.index and b in wr_matrix.columns) else None)
                     all_z[(a,b)] = val
 
-            # Filtrer : garder seulement les tokens qui ont au moins une cellule qui passe les filtres
-            def has_passing_cell(token, candidate_list):
-                return any(cell_passes(token, o) for o in candidate_list if o != token)
-
-            # Partir de tous les labels avec une valeur non-nulle
-            has_any = [l for l in labels if any(all_z.get((l, o)) is not None for o in labels if o != l)]
-            # Filtrage itératif sur la condition passes
-            fl = has_any[:]
-            changed = True
-            while changed:
-                new_fl = [l for l in fl if has_passing_cell(l, fl)]
-                changed = new_fl != fl
-                fl = new_fl
-            filtered_labels = fl
+            # filtered_labels already computed above from passing_pairs
 
             display_labels = [dn(l) for l in filtered_labels]
             z_vals, text_vals, hover_vals = [], [], []
