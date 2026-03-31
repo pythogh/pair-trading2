@@ -1183,18 +1183,13 @@ with tab_wr:
                     if nt is None or int(nt) < int(threshold_val):
                         continue
 
-                else:
-                    raw = safe_float(metric_matrix.loc[a, b] if (a in metric_matrix.index and b in metric_matrix.columns) else None)
-                    if raw is None:
-                        continue
-                    if metric_choice == "Z-Score" and abs(raw) < threshold_val:
-                        continue
-                    continue
-                if has_nt:
-                    nt = safe_float(nt_matrix.loc[a, b] if (a in nt_matrix.index and b in nt_matrix.columns) else None)
-                    nt_val = int(nt) if nt is not None else 0
-                    if nt_val < nt_min:
-                        continue
+                elif metric_choice == "Z-Score":
+                    if metric_matrix.empty:
+                        pass  # z_matrix vide → on affiche tout
+                    else:
+                        raw = safe_float(metric_matrix.loc[a, b] if (a in metric_matrix.index and b in metric_matrix.columns) else None)
+                        if raw is None or abs(raw) < threshold_val:
+                            continue
 
                 passing_pairs.add((a, b))
                 passing_pairs.add((b, a))
