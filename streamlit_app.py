@@ -211,9 +211,9 @@ def compute_metrics(series_a, series_b, name_a, name_b):
     verdict_color = "green" if verdict == "✅ Valide" else "red"
 
     if current_z > 2:
-        signal = f"SHORT ↓ {name_a} / LONG ↑ {name_b}"
+        signal = f"SHORT {name_a} / LONG {name_b}"
     elif current_z < -2:
-        signal = f"LONG ↑ {name_a} / SHORT ↓ {name_b}"
+        signal = f"LONG {name_a} / SHORT {name_b}"
     else:
         signal = "—"
 
@@ -414,7 +414,7 @@ st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
 # ── Signaux actifs ────────────────────────────────────────────────────────────
 st.divider()
-st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 8px;color:#111'>Signaux actifs</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='font-size:13px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin:0 0 12px'>Signaux actifs</h2>", unsafe_allow_html=True)
 filtre = st.radio("", ["Valide uniquement", "Tout"], horizontal=True, label_visibility="collapsed")
 
 if not st.session_state.get("matrix_results"):
@@ -492,7 +492,7 @@ else:
 
 # ── Analyse ───────────────────────────────────────────────────────────────────
 st.divider()
-st.markdown("<h2 style='font-size:15px;font-weight:500;letter-spacing:-0.01em;margin:0 0 12px;color:#111'>Analyse</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='font-size:13px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin:0 0 12px'>Analyse</h2>", unsafe_allow_html=True)
 
 # ── Paramètres globaux ────────────────────────────────────────────────────────
 import datetime as dt
@@ -660,12 +660,12 @@ with tab_bt:
                 sharpe     = (rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0
 
                 pnl_color  = "#0F6E56" if total_pnl >= 0 else "#A32D2D"
-                pnl_icon   = "▲" if total_pnl >= 0 else "▼"
+                pnl_icon   = ""
                 wr_color   = "#0F6E56" if win_rate >= 0.5 else "#A32D2D"
-                wr_icon    = "▲" if win_rate >= 0.5 else "▼"
+                wr_icon    = ""
                 dd_color   = "#A32D2D" if max_dd < 0 else "#0F6E56"
                 sh_color   = "#0F6E56" if sharpe >= 1 else ("#854F0B" if sharpe >= 0 else "#A32D2D")
-                sh_icon    = "▲" if sharpe >= 1 else ("—" if sharpe >= 0 else "▼")
+                sh_icon    = "" if sharpe >= 0 else ""
 
                 bt_cards = [
                     ("Trades",       str(n_trades),              "#333",     ""),
@@ -1229,6 +1229,7 @@ with tab_wr:
                 yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False, automargin=True),
             )
 
+            st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
             _, col_center, _ = st.columns([1, matrix_w // 10, 1])
             with col_center:
                 sel = st.plotly_chart(fig_wr, use_container_width=False, key="wr_heatmap")
