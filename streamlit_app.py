@@ -1202,7 +1202,8 @@ with tab_wr:
 
             n = len(filtered_labels)
             cell_size = 70
-            matrix_px = n * cell_size + 180
+            matrix_w = n * cell_size + 120
+            matrix_h = n * cell_size + 120  # même taille — labels dans le canvas
 
             fig_wr = go.Figure(go.Heatmap(
                 z=z_vals, x=display_labels, y=display_labels,
@@ -1221,17 +1222,14 @@ with tab_wr:
             ))
 
             fig_wr.update_layout(
-                width=matrix_px, height=matrix_px,
+                width=matrix_w, height=matrix_h,
                 margin=dict(t=0, b=10, l=120, r=10, pad=0),
                 plot_bgcolor="#f0f0ee", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90,
-                           scaleanchor="y", constrain="domain", automargin=True),
-                yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False,
-                           constrain="domain", automargin=True),
+                xaxis=dict(tickfont=dict(size=11), side="top", showgrid=False, tickangle=-90, automargin=True),
+                yaxis=dict(tickfont=dict(size=11), autorange="reversed", showgrid=False, automargin=True),
             )
 
-            # Clic sur une cellule → prefill backtest
-            _, col_center, _ = st.columns([1, matrix_px // 10, 1])
+            _, col_center, _ = st.columns([1, matrix_w // 10, 1])
             with col_center:
                 sel = st.plotly_chart(fig_wr, use_container_width=False, key="wr_heatmap")
 
