@@ -366,7 +366,7 @@ METRICS_COMPACT = [
         "name": "Half-Life",
         "seuil": "2–5 jours (48–120h)",
         "formule": "t<sub>½</sub> = ln(2) / λ",
-        "note": "Temps de retour à la moyenne du spread. Calculé sur bougies horaires. Fenêtre z-score = 168h (7j).",
+        "note": "Calculé sur bougies horaires, affiché en jours. Fenêtre z-score = 168h (7j).",
         "detail": "La Half-Life mesure le temps pour que 50% d'un écart anormal se referme. On modélise la vitesse de retour à la moyenne par régression de Δspread sur spread(t-1). Si t½ = 3 jours, le trade moyen dure 3 jours. Trop court (< 1j) → frais trop élevés. Trop long (> 20j) → capital immobilisé.",
     },
     {
@@ -459,11 +459,11 @@ else:
         st.dataframe(
             df_tab1_signal.reset_index(drop=True).style
             .set_properties(**{"background-color": "#ffffff"})
-            .applymap(_color_verdict,  subset=["Verdict"])
-            .applymap(_color_corr,     subset=["Corrélation"])
-            .applymap(_color_p,        subset=["Co-intégration p"])
-            .applymap(_color_hl,       subset=["Half-Life"])
-            .applymap(_color_z,        subset=["Z-Score"])
+            .map(_color_verdict,  subset=["Verdict"])
+            .map(_color_corr,     subset=["Corrélation"])
+            .map(_color_p,        subset=["Co-intégration p"])
+            .map(_color_hl,       subset=["Half-Life"])
+            .map(_color_z,        subset=["Z-Score"])
             .format({
                 "Corrélation":      "{:.3f}",
                 "Hedge Ratio β":    "{:.4f}",
@@ -736,7 +736,7 @@ with tab_bt:
 
                 styled = df_display.style.set_properties(**{"background-color": "#ffffff"}).apply(_row_color, axis=1).format(fmt_dict)
                 if pnl_a_col in df_display.columns:
-                    styled = styled.applymap(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
+                    styled = styled.map(_color_pnl_leg, subset=[pnl_a_col, pnl_b_col, "P&L ($)"])
                 st.dataframe(styled, use_container_width=True, hide_index=True)
                 st.markdown("<div style='margin:24px 0 0'></div>", unsafe_allow_html=True)
                 st.divider()
